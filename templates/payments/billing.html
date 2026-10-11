@@ -1,0 +1,69 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Billing & Plan" %}{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  <h4 class="mb-0">{% trans "Billing & Plan" %}</h4>
+  <div class="text-muted small">{% trans "Your Mera Hisaab subscription." %}</div>
+</div>
+
+{% if not gateway_ready %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle"></i>
+  {% trans "Online billing is not enabled yet. Add Razorpay keys to activate subscriptions." %}
+</div>
+{% endif %}
+
+{% if subscription %}
+<div class="mh-card p-4 mb-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <div class="text-muted small">{% trans "Current plan" %}</div>
+      <div class="fs-5 fw-semibold">{{ subscription.plan.name|default:subscription.plan_code }}</div>
+    </div>
+    <span class="badge {% if subscription.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %} fs-6">
+      {{ subscription.get_status_display }}
+    </span>
+  </div>
+  {% if subscription.current_period_end %}
+  <div class="text-muted small mt-2">{% trans "Renews / ends on" %} {{ subscription.current_period_end|date:"d M Y" }}</div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="row g-3">
+  {% for plan in plans %}
+  <div class="col-12 col-md-4">
+    <div class="mh-card p-4 h-100 d-flex flex-column">
+      <div class="fw-semibold">{{ plan.name }}</div>
+      <div class="fs-3 fw-bold my-2">₹{{ plan.amount|intcomma }}
+        <span class="fs-6 fw-normal text-muted">/ {{ plan.period }}</span>
+      </div>
+      <ul class="list-unstyled text-muted small my-3">
+        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> {% trans "Unlimited Products & Catalog" %}</li>
+        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> {% trans "Unlimited POS Sales & Invoices" %}</li>
+        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> {% trans "Multi-Staff Accounts (Cashier/Manager)" %}</li>
+        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> {% trans "Thermal POS Print & CSV Export" %}</li>
+        <li class="mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> {% trans "P&L Financial Reports" %}</li>
+      </ul>
+      <form method="post" action="{% url 'payments:subscribe' %}" class="mt-auto d-grid">
+
+        {% csrf_token %}
+        <input type="hidden" name="plan_code" value="{{ plan.code }}">
+        <button type="submit" class="btn btn-primary"
+                {% if not gateway_ready %}disabled{% endif %}
+                {% if subscription.plan_code == plan.code and subscription.is_active %}disabled{% endif %}>
+          {% if subscription.plan_code == plan.code and subscription.is_active %}
+            {% trans "Current plan" %}
+          {% else %}
+            {% trans "Choose plan" %}
+          {% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

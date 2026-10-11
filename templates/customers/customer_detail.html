@@ -1,0 +1,74 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{{ customer.name }}{% endblock %}
+
+{% block content %}
+{% with sym=current_business.currency_symbol %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <a href="{% url 'customers:list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="mb-0">{{ customer.name }}</h4>
+  {% if customer.phone %}<span class="text-muted"><i class="bi bi-telephone"></i> {{ customer.phone }}</span>{% endif %}
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'customers:edit' customer.pk %}" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> {% trans "Edit" %}</a>
+    {% if customer.current_balance > 0 %}
+      <a href="{{ whatsapp_reminder_url }}" target="_blank" rel="noopener" class="btn btn-outline-success"><i class="bi bi-whatsapp"></i> {% trans "WhatsApp Reminder" %}</a>
+    {% endif %}
+    <a href="{% url 'customers:add_udhaar' customer.pk %}" class="btn btn-outline-warning"><i class="bi bi-plus-circle"></i> {% trans "Add udhaar" %}</a>
+    <a href="{% url 'customers:payment' customer.pk %}" class="btn btn-success"><i class="bi bi-cash-coin"></i> {% trans "Record payment" %}</a>
+  </div>
+
+</div>
+
+<div class="row g-3 mb-2">
+  {% include "components/dashboard_card.html" with card_label=_("Pending") card_number=customer.current_balance card_prefix=sym card_decimals=2 card_icon="bi-cash-stack" card_variant="danger" %}
+  {% include "components/dashboard_card.html" with card_label=_("Total udhaar given") card_number=totals.total_charged card_prefix=sym card_decimals=2 card_icon="bi-arrow-up-circle" card_variant="warning" %}
+  {% include "components/dashboard_card.html" with card_label=_("Total paid") card_number=totals.total_paid card_prefix=sym card_decimals=2 card_icon="bi-arrow-down-circle" card_variant="success" %}
+  {% include "components/dashboard_card.html" with card_label=_("Credit limit") card_number=customer.credit_limit card_prefix=sym card_decimals=2 card_icon="bi-shield-check" card_variant="info" %}
+</div>
+
+<div class="mh-card p-0 mt-3">
+  <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">{% trans "Ledger" %}</h6>
+    <span class="small text-muted">{% trans "Positive balance = udhaar owed to you" %}</span>
+  </div>
+  {% if entries %}
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{% trans "Date" %}</th><th>{% trans "Description" %}</th>
+          <th class="text-end">{% trans "Debit" %}</th><th class="text-end">{% trans "Credit" %}</th>
+          <th class="text-end">{% trans "Balance" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td class="small">{{ e.created_at|date:"d M Y, H:i" }}</td>
+          <td>
+            {{ e.description }}
+            {% if e.method %}<span class="badge text-bg-light">{{ e.method }}</span>{% endif %}
+            {% if e.due_date %}<div class="small text-muted">{% trans "Due" %} {{ e.due_date|date:"d M Y" }}</div>{% endif %}
+          </td>
+          <td class="text-end text-danger">{% if e.entry_type == 'debit' %}{{ sym }}{{ e.amount|floatformat:2|intcomma }}{% endif %}</td>
+          <td class="text-end text-success">{% if e.entry_type == 'credit' %}{{ sym }}{{ e.amount|floatformat:2|intcomma }}{% endif %}</td>
+          <td class="text-end fw-semibold">{{ sym }}{{ e.balance_after|floatformat:2|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="p-4 text-center text-muted">{% trans "No transactions yet. Add udhaar or record a payment." %}</div>
+  {% endif %}
+</div>
+
+{% if customer.notes %}
+<div class="mh-card p-3 mt-3">
+  <div class="small text-muted mb-1">{% trans "Notes" %}</div>
+  {{ customer.notes|linebreaksbr }}
+</div>
+{% endif %}
+{% endwith %}
+{% endblock %}

@@ -1,0 +1,73 @@
+{% load humanize %}
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: a4; margin: 1.5cm; }
+  body { font-family: Helvetica, sans-serif; font-size: 11px; color: #111; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .muted { color: #666; }
+  .head td { vertical-align: top; }
+  table.items { width: 100%; border-collapse: collapse; margin-top: 14px; }
+  table.items th { background: #0f766e; color: #fff; padding: 6px; text-align: left; font-size: 10px; }
+  table.items td { padding: 6px; border-bottom: 1px solid #eee; }
+  .right { text-align: right; }
+  .totals { width: 45%; margin-left: 55%; margin-top: 10px; }
+  .totals td { padding: 3px 6px; }
+  .grand { font-size: 14px; font-weight: bold; border-top: 2px solid #111; }
+  .footer { text-align: center; color: #666; margin-top: 24px; font-size: 10px; }
+</style>
+</head>
+<body>
+  <table class="head" width="100%"><tr>
+    <td>
+      <h1>{{ business.name }}</h1>
+      <div class="muted">
+        {% if business.address %}{{ business.address }}<br>{% endif %}
+        {% if business.city %}{{ business.city }}{% if business.state %}, {{ business.state }}{% endif %} {{ business.pincode }}<br>{% endif %}
+        {% if business.phone %}Phone: {{ business.phone }}<br>{% endif %}
+        {% if business.gst_number %}GSTIN: {{ business.gst_number }}{% endif %}
+      </div>
+    </td>
+    <td class="right">
+      <h1>INVOICE</h1>
+      <div>{{ sale.invoice_number }}</div>
+      <div class="muted">{{ sale.created_at|date:"d M Y, H:i" }}</div>
+      <div class="muted">Status: {{ sale.get_payment_status_display }}</div>
+    </td>
+  </tr></table>
+
+  {% if sale.customer %}
+  <div style="margin-top:12px;"><strong>Bill to:</strong> {{ sale.customer.name }}{% if sale.customer.phone %} ({{ sale.customer.phone }}){% endif %}</div>
+  {% endif %}
+
+  <table class="items">
+    <thead><tr>
+      <th>Item</th><th class="right">Qty</th><th class="right">Price</th><th class="right">Tax</th><th class="right">Total</th>
+    </tr></thead>
+    <tbody>
+      {% for item in sale.items.all %}
+      <tr>
+        <td>{{ item.product_name }}</td>
+        <td class="right">{{ item.quantity|floatformat:"-3" }}</td>
+        <td class="right">{{ sym }}{{ item.unit_price|floatformat:2|intcomma }}</td>
+        <td class="right">{% if item.tax_percent %}{{ item.tax_percent|floatformat:"-2" }}%{% else %}-{% endif %}</td>
+        <td class="right">{{ sym }}{{ item.line_total|floatformat:2|intcomma }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><td>Subtotal</td><td class="right">{{ sym }}{{ sale.subtotal|floatformat:2|intcomma }}</td></tr>
+    {% if sale.discount_total %}<tr><td>Discount</td><td class="right">-{{ sym }}{{ sale.discount_total|floatformat:2|intcomma }}</td></tr>{% endif %}
+    {% if sale.tax_total %}<tr><td>Tax</td><td class="right">{{ sym }}{{ sale.tax_total|floatformat:2|intcomma }}</td></tr>{% endif %}
+    <tr class="grand"><td>Total</td><td class="right">{{ sym }}{{ sale.total|floatformat:2|intcomma }}</td></tr>
+    <tr><td>Paid</td><td class="right">{{ sym }}{{ sale.paid_amount|floatformat:2|intcomma }}</td></tr>
+    {% if sale.due_amount %}<tr><td>Pending</td><td class="right">{{ sym }}{{ sale.due_amount|floatformat:2|intcomma }}</td></tr>{% endif %}
+  </table>
+
+  <div class="footer">Thank you for your business! &middot; Powered by Mera Hisaab</div>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{% load i18n %}
+{% comment %}
+Mobile-only bottom tab bar (thumb-friendly). Hidden on lg+ screens where the
+sidebar is always visible. "Menu" opens the full sidebar offcanvas, so every
+section remains reachable on a phone. Links for later-phase features are shown
+as disabled until those phases ship.
+{% endcomment %}
+<nav class="mh-bottom-nav d-lg-none" aria-label="{% trans 'Primary' %}">
+  <a class="mh-bottom-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+     href="{% url 'core:dashboard' %}">
+    <i class="bi bi-speedometer2"></i><span>{% trans "Home" %}</span>
+  </a>
+  <a class="mh-bottom-item {% if request.resolver_match.namespace == 'products' or request.resolver_match.namespace == 'inventory' %}active{% endif %}"
+     href="{% url 'products:list' %}">
+    <i class="bi bi-box-seam"></i><span>{% trans "Products" %}</span>
+  </a>
+  <a class="mh-bottom-item {% if request.resolver_match.namespace == 'sales' %}active{% endif %}"
+     href="{% url 'sales:pos' %}">
+    <i class="bi bi-cart-check"></i><span>{% trans "Sell" %}</span>
+  </a>
+  <button type="button" class="mh-bottom-item" data-bs-toggle="offcanvas"
+          data-bs-target="#mhSidebar" aria-controls="mhSidebar">
+    <i class="bi bi-list"></i><span>{% trans "Menu" %}</span>
+  </button>
+</nav>

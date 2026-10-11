@@ -1,0 +1,88 @@
+{% load i18n %}
+{% comment %}
+Sidebar navigation. Links for features delivered in later phases are shown as
+disabled "soon" items so the shell is complete without pointing at URLs that
+don't exist yet. Each phase will activate its section.
+{% endcomment %}
+<aside class="mh-sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="mhSidebar">
+  <div class="mh-sidebar-header">
+    <a href="{% url 'core:dashboard' %}" class="mh-brand">
+      <span class="mh-brand-mark">MH</span>
+      <span class="mh-brand-name">{{ APP_NAME }}</span>
+    </a>
+    <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#mhSidebar"></button>
+  </div>
+
+  <nav class="mh-nav">
+    <a class="mh-nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+       href="{% url 'core:dashboard' %}">
+      <i class="bi bi-speedometer2"></i> {% trans "Dashboard" %}
+    </a>
+
+    <div class="mh-nav-heading">{% trans "Catalog" %}</div>
+    {% with rname=request.resolver_match.url_name|default:'' rns=request.resolver_match.namespace|default:'' %}
+    {% if not request.membership or request.membership.can_manage_inventory %}
+    <a class="mh-nav-link {% if rns == 'products' and 'category' not in rname %}active{% endif %}"
+       href="{% url 'products:list' %}"><i class="bi bi-box-seam"></i> {% trans "Products" %}</a>
+    <a class="mh-nav-link {% if 'category' in rname %}active{% endif %}"
+       href="{% url 'products:category_list' %}"><i class="bi bi-tags"></i> {% trans "Categories" %}</a>
+    <a class="mh-nav-link {% if request.resolver_match.namespace == 'inventory' %}active{% endif %}"
+       href="{% url 'inventory:list' %}"><i class="bi bi-clipboard-data"></i> {% trans "Inventory" %}</a>
+    {% endif %}
+    {% endwith %}
+
+    {% if not request.membership or request.membership.can_access_pos %}
+    <div class="mh-nav-heading">{% trans "Sales" %}</div>
+    <a class="mh-nav-link {% if request.resolver_match.namespace == 'sales' %}active{% endif %}"
+       href="{% url 'sales:pos' %}"><i class="bi bi-cart-check"></i> {% trans "POS / Sales" %}</a>
+    <a class="mh-nav-link {% if request.resolver_match.namespace == 'customers' %}active{% endif %}"
+       href="{% url 'customers:list' %}"><i class="bi bi-people"></i> {% trans "Customers" %}</a>
+    <a class="mh-nav-link {% if request.resolver_match.url_name == 'udhaar' %}active{% endif %}"
+       href="{% url 'udhaar' %}"><i class="bi bi-cash-stack"></i> {% trans "Udhaar" %}</a>
+    {% endif %}
+
+    {% if not request.membership or request.membership.can_manage_suppliers %}
+    <div class="mh-nav-heading">{% trans "Purchases" %}</div>
+    <a class="mh-nav-link {% if request.resolver_match.namespace == 'purchases' %}active{% endif %}"
+       href="{% url 'purchases:list' %}"><i class="bi bi-truck"></i> {% trans "Purchases" %}</a>
+    <a class="mh-nav-link {% if request.resolver_match.namespace == 'suppliers' %}active{% endif %}"
+       href="{% url 'suppliers:list' %}"><i class="bi bi-person-badge"></i> {% trans "Suppliers" %}</a>
+    {% endif %}
+
+    {% if not request.membership or request.membership.can_manage_expenses or request.membership.can_view_reports %}
+    <div class="mh-nav-heading">{% trans "Money" %}</div>
+    {% if not request.membership or request.membership.can_manage_expenses %}
+    <a class="mh-nav-link {% if request.resolver_match.namespace == 'payments' and request.resolver_match.url_name == 'list' %}active{% endif %}"
+       href="{% url 'payments:list' %}"><i class="bi bi-cash-coin"></i> {% trans "Payments" %}</a>
+    <a class="mh-nav-link {% if request.resolver_match.namespace == 'expenses' and 'categor' not in request.resolver_match.url_name %}active{% endif %}"
+       href="{% url 'expenses:list' %}"><i class="bi bi-wallet2"></i> {% trans "Expenses" %}</a>
+    {% endif %}
+    {% if not request.membership or request.membership.can_view_reports %}
+    <a class="mh-nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}"
+       href="{% url 'core:reports' %}"><i class="bi bi-file-earmark-bar-graph"></i> {% trans "Reports" %}</a>
+    {% endif %}
+    {% endif %}
+
+    <div class="mh-nav-heading">{% trans "Manage" %}</div>
+    {% if not request.membership or request.membership.can_manage_team %}
+    <a class="mh-nav-link {% if request.resolver_match.url_name == 'team_list' or 'employee' in request.resolver_match.url_name %}active{% endif %}"
+       href="{% url 'businesses:team_list' %}"><i class="bi bi-person-workspace"></i> {% trans "Team & Staff" %}</a>
+    {% endif %}
+    {% if not request.membership or request.membership.can_manage_settings %}
+    <a class="mh-nav-link {% if request.resolver_match.namespace == 'payments' and 'method' in request.resolver_match.url_name %}active{% endif %}"
+       href="{% url 'payments:method_list' %}"><i class="bi bi-credit-card"></i> {% trans "Payment Methods" %}</a>
+    <a class="mh-nav-link {% if request.resolver_match.namespace == 'expenses' and 'categor' in request.resolver_match.url_name %}active{% endif %}"
+       href="{% url 'expenses:category_list' %}"><i class="bi bi-tags"></i> {% trans "Expense Categories" %}</a>
+    <a class="mh-nav-link {% if request.resolver_match.namespace == 'payments' and 'billing' in request.resolver_match.url_name or request.resolver_match.url_name == 'subscribe' %}active{% endif %}"
+       href="{% url 'payments:billing' %}"><i class="bi bi-stars"></i> {% trans "Billing & Plan" %}</a>
+    <a class="mh-nav-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}"
+       href="{% url 'businesses:settings' %}"><i class="bi bi-gear"></i> {% trans "Shop Settings" %}</a>
+    {% endif %}
+
+  </nav>
+
+  <div class="mh-sidebar-footer">
+    <div class="small text-muted">{{ APP_TAGLINE }}</div>
+  </div>
+</aside>
+

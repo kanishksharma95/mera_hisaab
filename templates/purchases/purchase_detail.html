@@ -1,0 +1,55 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Purchase" %} {{ purchase.number }}{% endblock %}
+
+{% block content %}
+{% with sym=current_business.currency_symbol %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <a href="{% url 'purchases:list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="mb-0">{{ purchase.number }}</h4>
+  <span class="badge {% if purchase.payment_status == 'paid' %}text-bg-success{% elif purchase.payment_status == 'partial' %}text-bg-warning{% else %}text-bg-danger{% endif %}">{{ purchase.get_payment_status_display }}</span>
+  <a href="{% url 'purchases:add' %}" class="btn btn-primary ms-auto"><i class="bi bi-plus-lg"></i> {% trans "New Purchase" %}</a>
+</div>
+
+<div class="mh-card p-4">
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <div class="small text-muted">{% trans "Supplier" %}</div>
+      <div class="fw-semibold">{% if purchase.supplier %}<a href="{% url 'suppliers:detail' purchase.supplier.pk %}" class="text-decoration-none">{{ purchase.supplier.name }}</a>{% else %}—{% endif %}</div>
+    </div>
+    <div class="col-md-6 text-md-end">
+      <div class="small text-muted">{{ purchase.created_at|date:"d M Y, H:i" }}</div>
+      {% if purchase.supplier_invoice %}<div class="small">{% trans "Supplier bill" %}: {{ purchase.supplier_invoice }}</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead><tr><th>{% trans "Item" %}</th><th class="text-end">{% trans "Qty" %}</th><th class="text-end">{% trans "Cost" %}</th><th class="text-end">{% trans "Tax" %}</th><th class="text-end">{% trans "Total" %}</th></tr></thead>
+      <tbody>
+        {% for item in purchase.items.all %}
+        <tr>
+          <td>{{ item.product_name }}</td>
+          <td class="text-end">{{ item.quantity|floatformat:"-3" }}</td>
+          <td class="text-end">{{ sym }}{{ item.unit_cost|floatformat:2|intcomma }}</td>
+          <td class="text-end">{% if item.tax_percent %}{{ item.tax_percent|floatformat:"-2" }}%{% else %}—{% endif %}</td>
+          <td class="text-end">{{ sym }}{{ item.line_total|floatformat:2|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="row"><div class="col-md-6"></div><div class="col-md-6">
+    <div class="d-flex justify-content-between"><span>{% trans "Subtotal" %}</span><span>{{ sym }}{{ purchase.subtotal|floatformat:2|intcomma }}</span></div>
+    {% if purchase.discount_total %}<div class="d-flex justify-content-between text-muted"><span>{% trans "Discount" %}</span><span>−{{ sym }}{{ purchase.discount_total|floatformat:2|intcomma }}</span></div>{% endif %}
+    {% if purchase.tax_total %}<div class="d-flex justify-content-between text-muted"><span>{% trans "Tax" %}</span><span>{{ sym }}{{ purchase.tax_total|floatformat:2|intcomma }}</span></div>{% endif %}
+    <hr class="my-2">
+    <div class="d-flex justify-content-between fs-5 fw-bold"><span>{% trans "Total" %}</span><span>{{ sym }}{{ purchase.total|floatformat:2|intcomma }}</span></div>
+    <div class="d-flex justify-content-between text-success"><span>{% trans "Paid" %}</span><span>{{ sym }}{{ purchase.paid_amount|floatformat:2|intcomma }}</span></div>
+    {% if purchase.due_amount %}<div class="d-flex justify-content-between text-danger fw-semibold"><span>{% trans "Payable" %}</span><span>{{ sym }}{{ purchase.due_amount|floatformat:2|intcomma }}</span></div>{% endif %}
+  </div></div>
+</div>
+{% endwith %}
+{% endblock %}

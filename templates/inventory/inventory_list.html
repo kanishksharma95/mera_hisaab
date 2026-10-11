@@ -1,0 +1,46 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Inventory" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h4 class="mb-0">{% trans "Inventory" %}</h4>
+  <form method="get" class="d-flex gap-2">
+    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="{% trans 'Search product' %}">
+    <input type="hidden" name="low" value="{% if low_only %}1{% else %}0{% endif %}">
+    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
+    <a href="?low={% if low_only %}0{% else %}1{% endif %}" class="btn {% if low_only %}btn-warning{% else %}btn-outline-warning{% endif %}">
+      <i class="bi bi-exclamation-triangle"></i> {% trans "Low stock" %}
+    </a>
+  </form>
+</div>
+
+{% if page_obj.object_list %}
+<div class="mh-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr><th>{% trans "Product" %}</th><th class="text-end">{% trans "Current stock" %}</th><th class="text-end">{% trans "Min level" %}</th><th class="text-end">{% trans "Stock value" %}</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for p in page_obj.object_list %}
+        <tr class="{% if p.is_low_stock %}table-warning{% endif %}">
+          <td><a href="{% url 'products:detail' p.pk %}" class="fw-semibold text-decoration-none">{{ p.name }}</a></td>
+          <td class="text-end">{{ p.current_stock|floatformat:"-3" }} {{ p.unit }}
+            {% if p.is_low_stock %}<span class="badge text-bg-warning ms-1">{% trans "Low" %}</span>{% endif %}
+          </td>
+          <td class="text-end text-muted">{{ p.min_stock_level|floatformat:"-3" }}</td>
+          <td class="text-end">{{ current_business.currency_symbol }}{{ p.stock_value|floatformat:2|intcomma }}</td>
+          <td class="text-end"><a href="{% url 'inventory:adjust' p.pk %}" class="btn btn-sm btn-outline-primary">{% trans "Adjust" %}</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "components/pagination.html" %}
+{% else %}
+  {% include "components/empty_state.html" with empty_icon="bi-clipboard-data" empty_title=_("Nothing to show") empty_text=_("Add products to start tracking inventory.") empty_action_url="/products/add/" empty_action_label=_("Add Product") %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Products" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h4 class="mb-0">{% trans "Products" %}</h4>
+  <div class="d-flex gap-2">
+    <a href="{% url 'products:category_list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-tags"></i> {% trans "Categories" %}
+    </a>
+    <a href="{% url 'products:add' %}" class="btn btn-primary">
+      <i class="bi bi-plus-lg"></i> {% trans "Add Product" %}
+    </a>
+  </div>
+</div>
+
+<form method="get" class="mh-card p-3 mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-md-4">
+      <label class="form-label">{% trans "Search" %}</label>
+      <input type="search" name="q" value="{{ q }}" class="form-control"
+             placeholder="{% trans 'Name, SKU, barcode, brand' %}">
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">{% trans "Category" %}</label>
+      <select name="category" class="form-select">
+        <option value="">{% trans "All" %}</option>
+        {% for c in categories %}
+          <option value="{{ c.id }}" {% if selected_category == c.id|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">{% trans "Status" %}</label>
+      <select name="status" class="form-select">
+        <option value="active" {% if status == 'active' %}selected{% endif %}>{% trans "Active" %}</option>
+        <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>{% trans "Inactive" %}</option>
+        <option value="all" {% if status == 'all' %}selected{% endif %}>{% trans "All" %}</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">{% trans "Sort" %}</label>
+      <select name="sort" class="form-select">
+        <option value="name" {% if sort == 'name' %}selected{% endif %}>{% trans "Name A–Z" %}</option>
+        <option value="-name" {% if sort == '-name' %}selected{% endif %}>{% trans "Name Z–A" %}</option>
+        <option value="-price" {% if sort == '-price' %}selected{% endif %}>{% trans "Price high–low" %}</option>
+        <option value="price" {% if sort == 'price' %}selected{% endif %}>{% trans "Price low–high" %}</option>
+        <option value="-stock" {% if sort == '-stock' %}selected{% endif %}>{% trans "Stock high–low" %}</option>
+        <option value="newest" {% if sort == 'newest' %}selected{% endif %}>{% trans "Newest" %}</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-1 d-grid">
+      <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+    </div>
+  </div>
+</form>
+
+{% with sym=current_business.currency_symbol %}
+{% if page_obj.object_list %}
+<div class="mh-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{% trans "Product" %}</th>
+          <th>{% trans "Category" %}</th>
+          <th class="text-end">{% trans "Selling" %}</th>
+          <th class="text-end">{% trans "Stock" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in page_obj.object_list %}
+        <tr>
+          <td>
+            <a href="{% url 'products:detail' p.pk %}" class="fw-semibold text-decoration-none">{{ p.name }}</a>
+            {% if not p.is_active %}<span class="badge text-bg-secondary ms-1">{% trans "Inactive" %}</span>{% endif %}
+            <div class="text-muted small">{% if p.sku %}SKU {{ p.sku }}{% endif %}{% if p.brand %} · {{ p.brand }}{% endif %}</div>
+          </td>
+          <td>{{ p.category.name|default:"—" }}</td>
+          <td class="text-end">{{ sym }}{{ p.selling_price|floatformat:2|intcomma }}</td>
+          <td class="text-end">
+            {{ p.current_stock|floatformat:"-3" }} {{ p.unit }}
+            {% if p.is_low_stock %}<span class="badge text-bg-warning ms-1">{% trans "Low" %}</span>{% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'products:edit' p.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'inventory:adjust' p.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-clipboard-data"></i></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "components/pagination.html" %}
+{% else %}
+  {% include "components/empty_state.html" with empty_title=_("No products yet") empty_text=_("Add your first product to start tracking stock and sales.") empty_action_url="/products/add/" empty_action_label=_("Add Product") %}
+{% endif %}
+{% endwith %}
+{% endblock %}

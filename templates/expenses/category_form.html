@@ -1,0 +1,22 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n %}
+
+{% block title %}{% if is_edit %}{% trans "Edit Category" %}{% else %}{% trans "Add Category" %}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'expenses:category_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="mb-0">{% if is_edit %}{% trans "Edit Category" %}{% else %}{% trans "Add Category" %}{% endif %}</h4>
+</div>
+
+<div class="mh-card p-4" style="max-width:520px">
+  {% include "components/form_errors.html" %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "components/field.html" with field=form.name %}
+    {% include "components/field.html" with field=form.sort_order %}
+    <button type="submit" class="btn btn-primary">{% if is_edit %}{% trans "Save changes" %}{% else %}{% trans "Add category" %}{% endif %}</button>
+    <a href="{% url 'expenses:category_list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+  </form>
+</div>
+{% endblock %}

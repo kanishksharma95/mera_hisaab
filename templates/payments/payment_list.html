@@ -1,0 +1,110 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Payments" %}{% endblock %}
+
+{% block content %}
+{% with sym=current_business.currency_symbol %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div>
+    <h4 class="mb-0">{% trans "Payments" %}</h4>
+    <div class="text-muted small">{% trans "Cashbook — every rupee in and out." %}</div>
+  </div>
+  <a href="{% url 'payments:method_list' %}" class="btn btn-outline-secondary"><i class="bi bi-gear"></i> {% trans "Payment Methods" %}</a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-md-4">
+    <div class="mh-card p-3 h-100">
+      <div class="text-muted small">{% trans "Money in" %}</div>
+      <div class="fs-4 fw-semibold text-success">{{ sym }}{{ totals.total_in|floatformat:2|intcomma }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="mh-card p-3 h-100">
+      <div class="text-muted small">{% trans "Money out" %}</div>
+      <div class="fs-4 fw-semibold text-danger">{{ sym }}{{ totals.total_out|floatformat:2|intcomma }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="mh-card p-3 h-100">
+      <div class="text-muted small">{% trans "Net" %}</div>
+      <div class="fs-4 fw-semibold {% if totals.net < 0 %}text-danger{% else %}text-success{% endif %}">{{ sym }}{{ totals.net|floatformat:2|intcomma }}</div>
+    </div>
+  </div>
+</div>
+
+<form method="get" class="mh-card p-3 mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-3">
+      <label class="form-label">{% trans "Direction" %}</label>
+      <select name="direction" class="form-select">
+        <option value="">{% trans "All" %}</option>
+        <option value="in" {% if direction == 'in' %}selected{% endif %}>{% trans "Received" %}</option>
+        <option value="out" {% if direction == 'out' %}selected{% endif %}>{% trans "Paid out" %}</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">{% trans "Method" %}</label>
+      <select name="method" class="form-select">
+        <option value="">{% trans "All" %}</option>
+        {% for m in methods %}
+        <option value="{{ m.pk }}" {% if method_id == m.pk|stringformat:'s' %}selected{% endif %}>{{ m.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">{% trans "From" %}</label>
+      <input type="date" name="from" value="{{ date_from }}" class="form-control">
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label">{% trans "To" %}</label>
+      <input type="date" name="to" value="{{ date_to }}" class="form-control">
+    </div>
+    <div class="col-8 col-md-1">
+      <label class="form-label">{% trans "Search" %}</label>
+      <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="{% trans 'Ref/note' %}">
+    </div>
+    <div class="col-4 col-md-1 d-grid"><button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button></div>
+  </div>
+</form>
+
+{% if page_obj.object_list %}
+<div class="mh-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Method" %}</th>
+          <th>{% trans "Party" %}</th>
+          <th>{% trans "Reference" %}</th>
+          <th class="text-end">{% trans "Amount" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in page_obj.object_list %}
+        <tr>
+          <td class="text-muted">{{ p.created_at|date:"d M Y" }}</td>
+          <td>{{ p.method.name }}</td>
+          <td>
+            {% if p.customer %}{{ p.customer.name }}
+            {% elif p.supplier %}{{ p.supplier.name }}
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td class="text-muted small">{{ p.reference|default:p.note|default:"—" }}</td>
+          <td class="text-end fw-semibold {% if p.direction == 'in' %}text-success{% else %}text-danger{% endif %}">
+            {% if p.direction == 'in' %}+{% else %}−{% endif %}{{ sym }}{{ p.amount|floatformat:2|intcomma }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "components/pagination.html" %}
+{% else %}
+  {% include "components/empty_state.html" with empty_icon="bi-wallet2" empty_title=_("No payments yet") empty_text=_("Payments recorded from sales and purchases will show up here.") %}
+{% endif %}
+{% endwith %}
+{% endblock %}

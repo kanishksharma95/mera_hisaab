@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body_class %}mh-app{% endblock %}
+
+{% block body %}
+<div class="mh-shell">
+  {% include "components/sidebar.html" %}
+
+  <div class="mh-main">
+    {% include "components/navbar.html" %}
+
+    <main class="mh-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% include "components/bottom_nav.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{# Single toast. Expects `message`, `variant`, `icon` in context. #}
+<div class="toast mh-toast mh-toast-{{ variant }}" role="alert" aria-live="assertive" aria-atomic="true"
+     data-bs-delay="4500">
+  <div class="toast-body">
+    <i class="bi {{ icon }} mh-toast-icon"></i>
+    <span class="flex-grow-1">{{ message }}</span>
+    <button type="button" class="btn-close btn-close-sm ms-2" data-bs-dismiss="toast" aria-label="Close"></button>
+  </div>
+</div>

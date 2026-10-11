@@ -1,0 +1,167 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "New Purchase" %}{% endblock %}
+
+{% block content %}
+<input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h4 class="mb-0">{% trans "New Purchase (Stock In)" %}</h4>
+  <a href="{% url 'purchases:list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-truck"></i> {% trans "All purchases" %}</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="mh-card p-3 mb-3">
+      <div class="input-group input-group-lg">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input type="search" id="pSearch" class="form-control" placeholder="{% trans 'Search product to add…' %}" autocomplete="off" autofocus>
+      </div>
+    </div>
+    <div id="pResults" class="row g-2"></div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="mh-card p-3 mh-cart">
+      <h6 class="mb-3"><i class="bi bi-box-arrow-in-down"></i> {% trans "Items" %}</h6>
+      <div id="pItems" class="mh-cart-items"></div>
+      <div id="pEmpty" class="text-muted text-center py-4">{% trans "Add products to purchase." %}</div>
+
+      <div class="mt-3">
+        <div class="d-flex justify-content-between"><span>{% trans "Subtotal" %}</span><span id="pSub">{{ currency_symbol }}0.00</span></div>
+        <div class="d-flex justify-content-between text-muted"><span>{% trans "Tax" %}</span><span id="pTax">{{ currency_symbol }}0.00</span></div>
+        <hr class="my-2">
+        <div class="d-flex justify-content-between fs-5 fw-bold"><span>{% trans "Total" %}</span><span id="pTotal">{{ currency_symbol }}0.00</span></div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">{% trans "Supplier" %} <span class="text-muted small">({% trans "required for credit" %})</span></label>
+        <select id="pSupplier" class="form-select mb-2">
+          <option value="">{% trans "No supplier / cash" %}</option>
+          {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}
+        </select>
+
+        <label class="form-label">{% trans "Supplier bill no. (optional)" %}</label>
+        <input type="text" id="pBill" class="form-control mb-2">
+
+        <label class="form-label">{% trans "Payment method" %}</label>
+        <select id="pMethod" class="form-select mb-2">
+          {% for m in payment_methods %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+        </select>
+
+        <label class="form-label">{% trans "Amount paid now" %}</label>
+        <div class="input-group mb-3">
+          <span class="input-group-text">{{ currency_symbol }}</span>
+          <input type="number" id="pPaid" class="form-control" value="0" min="0" step="0.01">
+          <button class="btn btn-outline-secondary" type="button" id="pExact">{% trans "Full" %}</button>
+        </div>
+
+        <div id="pError" class="alert alert-danger py-2 d-none"></div>
+        <button id="pComplete" class="btn btn-primary btn-lg w-100" disabled>{% trans "Save Purchase" %}</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  "use strict";
+  const SYM = "{{ currency_symbol|escapejs }}";
+  const csrf = document.getElementById("csrfToken").value;
+  const items = [];
+  const $ = (id) => document.getElementById(id);
+  const money = (n) => SYM + (Math.round((Number(n) + Number.EPSILON) * 100) / 100).toFixed(2);
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  let timer = null;
+  function search() {
+    fetch("{% url 'purchases:search' %}?q=" + encodeURIComponent($("pSearch").value.trim()))
+      .then(r => r.json()).then(d => render(d.results));
+  }
+  $("pSearch").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(search, 200); });
+
+  function render(list) {
+    const box = $("pResults"); box.innerHTML = "";
+    if (!list.length) { box.innerHTML = '<div class="col-12 text-muted p-3">{% trans "No products found." %}</div>'; return; }
+    list.forEach(p => {
+      const col = document.createElement("div"); col.className = "col-6 col-md-4";
+      col.innerHTML = `<button type="button" class="mh-prod-btn w-100">
+        <div class="fw-semibold text-truncate">${esc(p.name)}</div>
+        <div class="small text-muted">{% trans "Cost" %} ${money(p.cost)} · ${esc(p.unit)}</div>
+        <div class="small text-muted">{% trans "Stock" %} ${p.stock}</div></button>`;
+      col.querySelector("button").addEventListener("click", () => add(p));
+      box.appendChild(col);
+    });
+  }
+
+  function add(p) {
+    let l = items.find(x => x.id === p.id);
+    if (l) { l.qty += 1; }
+    else { items.push({ id: p.id, name: p.name, cost: Number(p.cost), tax: Number(p.tax), unit: p.unit, qty: 1 }); }
+    renderItems();
+  }
+  function rm(id) { const i = items.findIndex(x => x.id === id); if (i > -1) items.splice(i, 1); renderItems(); }
+
+  function lineNet(l) { return l.cost * l.qty; }
+  function lineTax(l) { return lineNet(l) * (l.tax || 0) / 100; }
+
+  function renderItems() {
+    const box = $("pItems"); box.innerHTML = "";
+    $("pEmpty").style.display = items.length ? "none" : "block";
+    items.forEach(l => {
+      const row = document.createElement("div"); row.className = "mh-cart-row";
+      row.innerHTML = `<div class="flex-grow-1">
+          <div class="fw-semibold">${esc(l.name)}</div>
+          <div class="small text-muted d-flex align-items-center gap-1 mt-1">
+            <input type="number" class="mh-qty p-qty" value="${l.qty}" min="0.001" step="1"> ${esc(l.unit)} ×
+            <span class="input-group input-group-sm" style="max-width:110px"><span class="input-group-text">${SYM}</span>
+            <input type="number" class="form-control p-cost" value="${l.cost}" min="0" step="0.01"></span>
+          </div>
+        </div>
+        <div class="text-end"><div class="fw-semibold">${money(lineNet(l) + lineTax(l))}</div>
+          <button class="btn btn-sm btn-link text-danger p-0 p-rm">{% trans "Remove" %}</button></div>`;
+      row.querySelector(".p-qty").addEventListener("input", e => { l.qty = Math.max(0.001, Number(e.target.value) || 0); recalc(); e.target.closest(".mh-cart-row").querySelector(".fw-semibold").textContent; renderTotalsOnly(); });
+      row.querySelector(".p-cost").addEventListener("input", e => { l.cost = Math.max(0, Number(e.target.value) || 0); renderTotalsOnly(); });
+      row.querySelector(".p-rm").addEventListener("click", () => rm(l.id));
+      box.appendChild(row);
+    });
+    recalc();
+  }
+  function renderTotalsOnly() { recalc(); }
+
+  function recalc() {
+    const sub = items.reduce((s, l) => s + lineNet(l), 0);
+    const tax = items.reduce((s, l) => s + lineTax(l), 0);
+    $("pSub").textContent = money(sub);
+    $("pTax").textContent = money(tax);
+    $("pTotal").textContent = money(sub + tax);
+    $("pComplete").disabled = items.length === 0;
+    return sub + tax;
+  }
+  $("pExact").addEventListener("click", () => { $("pPaid").value = recalc().toFixed(2); });
+
+  $("pComplete").addEventListener("click", () => {
+    const btn = $("pComplete"), err = $("pError");
+    err.classList.add("d-none"); btn.disabled = true;
+    const payload = {
+      items: items.map(l => ({ product: l.id, quantity: l.qty, unit_cost: l.cost, tax_percent: l.tax })),
+      supplier: $("pSupplier").value || null,
+      supplier_invoice: $("pBill").value || "",
+      payments: [{ method: Number($("pMethod").value), amount: Number($("pPaid").value) || 0 }],
+    };
+    fetch("{% url 'purchases:checkout' %}", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+      body: JSON.stringify(payload),
+    }).then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (ok && d.redirect) { window.location = d.redirect; }
+        else { err.textContent = d.error || "{% trans 'Could not save purchase.' %}"; err.classList.remove("d-none"); btn.disabled = false; }
+      }).catch(() => { err.textContent = "{% trans 'Network error.' %}"; err.classList.remove("d-none"); btn.disabled = false; });
+  });
+
+  search();
+})();
+</script>
+{% endblock %}

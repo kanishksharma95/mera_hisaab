@@ -1,0 +1,47 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Udhaar" %}{% endblock %}
+
+{% block content %}
+{% with sym=current_business.currency_symbol %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h4 class="mb-0">{% trans "Udhaar (Pending Credit)" %}</h4>
+  <a href="{% url 'customers:list' %}" class="btn btn-outline-secondary"><i class="bi bi-people"></i> {% trans "All customers" %}</a>
+</div>
+
+<div class="row g-3 mb-2">
+  {% include "components/dashboard_card.html" with card_label=_("Total outstanding") card_number=total_outstanding card_prefix=sym card_decimals=2 card_icon="bi-cash-stack" card_variant="danger" %}
+  {% include "components/dashboard_card.html" with card_label=_("Customers with udhaar") card_number=debtor_count card_icon="bi-people" card_variant="warning" %}
+</div>
+
+{% if page_obj.object_list %}
+<div class="mh-card mt-2">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr><th>{% trans "Customer" %}</th><th>{% trans "Phone" %}</th><th class="text-end">{% trans "Pending" %}</th><th></th></tr></thead>
+      <tbody>
+        {% for c in page_obj.object_list %}
+        <tr>
+          <td><a href="{% url 'customers:detail' c.pk %}" class="fw-semibold text-decoration-none">{{ c.name }}</a></td>
+          <td class="text-muted">{{ c.phone|default:"—" }}</td>
+          <td class="text-end text-danger fw-semibold">{{ sym }}{{ c.current_balance|floatformat:2|intcomma }}</td>
+          <td class="text-end">
+            {% if c.phone %}
+            <a href="{{ c.whatsapp_reminder_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success me-1" title="{% trans 'WhatsApp Reminder' %}"><i class="bi bi-whatsapp"></i></a>
+            {% endif %}
+            <a href="{% url 'customers:payment' c.pk %}" class="btn btn-sm btn-success">{% trans "Collect" %}</a>
+          </td>
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "components/pagination.html" %}
+{% else %}
+  {% include "components/empty_state.html" with empty_icon="bi-emoji-smile" empty_title=_("No pending udhaar") empty_text=_("Great! No customer currently owes you money.") %}
+{% endif %}
+{% endwith %}
+{% endblock %}

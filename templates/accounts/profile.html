@@ -1,0 +1,17 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Profile" %}{% endblock %}
+
+{% block content %}
+<h4 class="mb-4">{% trans "My Profile" %}</h4>
+<div class="mh-card p-4" style="max-width:560px">
+  {% include "components/form_errors.html" %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% for field in form %}{% include "components/field.html" with field=field %}{% endfor %}
+    <button type="submit" class="btn btn-primary">{% trans "Save changes" %}</button>
+    <a href="{% url 'accounts:password_change' %}" class="btn btn-outline-secondary">{% trans "Change password" %}</a>
+  </form>
+</div>
+{% endblock %}

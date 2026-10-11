@@ -1,0 +1,6 @@
+Django>=5.2,<6.0
+psycopg[binary]>=3.2
+django-environ>=0.11
+Pillow>=10.0
+xhtml2pdf>=0.2.17
+razorpay>=1.4

@@ -1,0 +1,18 @@
+{% extends "layouts/auth_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Login" %}{% endblock %}
+
+{% block auth_content %}
+<h5 class="mb-3">{% trans "Sign in to your shop" %}</h5>
+{% include "components/form_errors.html" %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% for field in form %}{% include "components/field.html" with field=field %}{% endfor %}
+  <button type="submit" class="btn btn-primary w-100">{% trans "Login" %}</button>
+</form>
+<div class="d-flex justify-content-between mt-3 small">
+  <a href="{% url 'accounts:password_reset' %}">{% trans "Forgot password?" %}</a>
+  <a href="{% url 'accounts:register' %}">{% trans "Create an account" %}</a>
+</div>
+{% endblock %}

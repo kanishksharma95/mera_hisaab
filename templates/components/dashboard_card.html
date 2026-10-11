@@ -1,0 +1,39 @@
+{% comment %}
+Stat card. Params:
+  card_label   — label text (required)
+  card_icon    — bootstrap icon class (e.g. "bi-cart-check")
+  card_variant — primary|success|info|warning|danger
+  card_number  — numeric value; animates from 0 (count-up)
+  card_prefix  — e.g. currency symbol "₹"
+  card_decimals— decimal places for the animated number (default 0)
+  card_value   — plain display value, used when card_number is not given
+  card_hint    — small hint text under the value
+  card_trend_dir  — up|down|flat (renders a trend badge)
+  card_trend_text — text for the trend badge (e.g. "12% vs yesterday")
+{% endcomment %}
+<div class="col-6 col-lg-3">
+  <div class="mh-card mh-stat mh-stat-{{ card_variant|default:'primary' }} mh-animate-in">
+    <div class="mh-stat-icon"><i class="bi {{ card_icon|default:'bi-graph-up' }}"></i></div>
+    <div class="mh-stat-body">
+      <div class="mh-stat-label">{{ card_label }}</div>
+      <div class="mh-stat-value">
+        {% if card_number|default_if_none:"" != "" %}
+          <span data-countup="{{ card_number }}"
+                data-prefix="{{ card_prefix|default:'' }}"
+                data-decimals="{{ card_decimals|default:0 }}">{{ card_prefix|default:'' }}0</span>
+        {% else %}
+          {{ card_value }}
+        {% endif %}
+      </div>
+      {% if card_trend_dir %}
+        <span class="mh-trend mh-trend-{{ card_trend_dir }}">
+          {% if card_trend_dir == 'up' %}<i class="bi bi-arrow-up-short"></i>
+          {% elif card_trend_dir == 'down' %}<i class="bi bi-arrow-down-short"></i>
+          {% else %}<i class="bi bi-dash"></i>{% endif %}{{ card_trend_text }}
+        </span>
+      {% elif card_hint %}
+        <div class="mh-stat-hint">{{ card_hint }}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>

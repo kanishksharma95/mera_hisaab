@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body_class %}mh-auth{% endblock %}
+
+{% block body %}
+<button type="button" class="mh-theme-fab" onclick="mhToggleTheme()" aria-label="Toggle theme">
+  <i class="bi bi-moon-stars" data-theme-icon></i>
+</button>
+<div class="mh-auth-wrap">
+  <div class="mh-auth-card">
+    <div class="text-center mb-4">
+      <div class="mh-brand justify-content-center">
+        <span class="mh-brand-mark">MH</span>
+        <span class="mh-brand-name">{{ APP_NAME }}</span>
+      </div>
+      <p class="text-muted small mt-1 mb-0">{{ APP_TAGLINE }}</p>
+    </div>
+
+    {% block auth_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Add udhaar" %}{% endblock %}
+
+{% block content %}
+{% with sym=current_business.currency_symbol %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'customers:detail' customer.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="mb-0">{% trans "Add udhaar" %} · {{ customer.name }}</h4>
+</div>
+
+<div class="mh-card p-4" style="max-width:520px">
+  <p class="text-muted">
+    {% trans "Current udhaar" %}:
+    <strong class="{% if customer.current_balance > 0 %}text-danger{% endif %}">{{ sym }}{{ customer.current_balance|floatformat:2|intcomma }}</strong>
+  </p>
+  {% include "components/form_errors.html" %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% for field in form %}{% include "components/field.html" with field=field %}{% endfor %}
+    <button type="submit" class="btn btn-warning">{% trans "Add udhaar" %}</button>
+    <a href="{% url 'customers:detail' customer.pk %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+  </form>
+</div>
+{% endwith %}
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Expense Categories" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div>
+    <h4 class="mb-0">{% trans "Expense Categories" %}</h4>
+    <div class="text-muted small">{% trans "Your own editable list — add, rename or hide any category." %}</div>
+  </div>
+  <a href="{% url 'expenses:category_add' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> {% trans "Add Category" %}</a>
+</div>
+
+<div class="mh-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{% trans "Category" %}</th>
+          <th class="text-center">{% trans "Status" %}</th>
+          <th class="text-end"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in categories %}
+        <tr>
+          <td class="fw-semibold">{{ c.name }}</td>
+          <td class="text-center">
+            {% if c.is_active %}<span class="badge text-bg-primary">{% trans "Active" %}</span>
+            {% else %}<span class="badge text-bg-secondary">{% trans "Inactive" %}</span>{% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'expenses:category_edit' c.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="{% url 'expenses:category_toggle' c.pk %}" class="d-inline">
+              {% csrf_token %}
+              {% if c.is_active %}
+                <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Deactivate" %}</button>
+              {% else %}
+                <button class="btn btn-sm btn-outline-success" type="submit">{% trans "Activate" %}</button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Add Expense" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'expenses:list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="mb-0">{% trans "Add Expense" %}</h4>
+</div>
+
+<div class="mh-card p-4" style="max-width:640px">
+  {% include "components/form_errors.html" %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "components/field.html" with field=form.category %}
+    <div class="row">
+      <div class="col-md-6">{% include "components/field.html" with field=form.amount %}</div>
+      <div class="col-md-6">{% include "components/field.html" with field=form.method %}</div>
+    </div>
+    {% include "components/field.html" with field=form.spent_on %}
+    {% include "components/field.html" with field=form.note %}
+    <button type="submit" class="btn btn-primary">{% trans "Save expense" %}</button>
+    <a href="{% url 'expenses:list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+  </form>
+</div>
+{% endblock %}

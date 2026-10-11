@@ -1,0 +1,19 @@
+{% comment %}
+Renders Django messages as Bootstrap toasts (top-right, auto-dismissing).
+app.js initialises and shows each one. Replaces the old static alert bar.
+{% endcomment %}
+{% if messages %}
+<div class="mh-toast-area" id="mhToastArea" aria-live="polite" aria-atomic="true">
+  {% for message in messages %}
+  {% if 'success' in message.tags %}{% with variant='success' icon='bi-check-circle-fill' %}
+    {% include "components/_toast.html" %}{% endwith %}
+  {% elif 'danger' in message.tags or 'error' in message.tags %}{% with variant='danger' icon='bi-exclamation-octagon-fill' %}
+    {% include "components/_toast.html" %}{% endwith %}
+  {% elif 'warning' in message.tags %}{% with variant='warning' icon='bi-exclamation-triangle-fill' %}
+    {% include "components/_toast.html" %}{% endwith %}
+  {% else %}{% with variant='info' icon='bi-info-circle-fill' %}
+    {% include "components/_toast.html" %}{% endwith %}
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}

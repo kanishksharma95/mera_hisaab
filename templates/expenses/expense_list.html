@@ -1,0 +1,81 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Expenses" %}{% endblock %}
+
+{% block content %}
+{% with sym=current_business.currency_symbol %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div>
+    <h4 class="mb-0">{% trans "Expenses" %}</h4>
+    <div class="text-muted small">{% trans "Rent, salaries, transport and every other outflow." %}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'expenses:export_csv' %}" class="btn btn-outline-secondary"><i class="bi bi-download"></i> {% trans "Export CSV" %}</a>
+    <a href="{% url 'expenses:category_list' %}" class="btn btn-outline-secondary"><i class="bi bi-tags"></i> {% trans "Categories" %}</a>
+    <a href="{% url 'expenses:add' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> {% trans "Add Expense" %}</a>
+  </div>
+
+</div>
+
+<div class="mh-card p-3 mb-3">
+  <div class="text-muted small">{% trans "Total (filtered)" %}</div>
+  <div class="fs-4 fw-semibold text-danger">{{ sym }}{{ total|floatformat:2|intcomma }}</div>
+</div>
+
+<form method="get" class="mh-card p-3 mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-md-5">
+      <label class="form-label">{% trans "Category" %}</label>
+      <select name="category" class="form-select">
+        <option value="">{% trans "All" %}</option>
+        {% for c in categories %}
+        <option value="{{ c.pk }}" {% if category_id == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">{% trans "From" %}</label>
+      <input type="date" name="from" value="{{ date_from }}" class="form-control">
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label">{% trans "To" %}</label>
+      <input type="date" name="to" value="{{ date_to }}" class="form-control">
+    </div>
+    <div class="col-12 col-md-1 d-grid"><button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button></div>
+  </div>
+</form>
+
+{% if page_obj.object_list %}
+<div class="mh-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Category" %}</th>
+          <th>{% trans "Paid via" %}</th>
+          <th>{% trans "Note" %}</th>
+          <th class="text-end">{% trans "Amount" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in page_obj.object_list %}
+        <tr>
+          <td class="text-muted">{{ e.spent_on|date:"d M Y" }}</td>
+          <td class="fw-semibold">{{ e.category.name }}</td>
+          <td>{{ e.method.name|default:"—" }}</td>
+          <td class="text-muted small">{{ e.note|default:"—" }}</td>
+          <td class="text-end fw-semibold text-danger">{{ sym }}{{ e.amount|floatformat:2|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "components/pagination.html" %}
+{% else %}
+  {% include "components/empty_state.html" with empty_icon="bi-wallet2" empty_title=_("No expenses yet") empty_text=_("Record rent, salaries and other outflows to see your true profit.") empty_action_url="/expenses/add/" empty_action_label=_("Add Expense") %}
+{% endif %}
+{% endwith %}
+{% endblock %}

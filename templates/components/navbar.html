@@ -1,0 +1,62 @@
+{% load i18n %}
+<header class="mh-navbar">
+  <button class="btn btn-light mh-sidebar-toggle d-lg-none" type="button"
+          data-bs-toggle="offcanvas" data-bs-target="#mhSidebar" aria-controls="mhSidebar">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <div class="mh-navbar-title">
+    {% if current_business %}{{ current_business.name }}{% else %}{{ APP_NAME }}{% endif %}
+  </div>
+
+  <div class="mh-navbar-right">
+    {# Dark / light theme toggle #}
+    <button type="button" class="btn btn-light btn-sm me-2" onclick="mhToggleTheme()"
+            title="{% trans 'Toggle theme' %}" aria-label="{% trans 'Toggle theme' %}">
+      <i class="bi bi-moon-stars" data-theme-icon></i>
+    </button>
+
+    {# Business switcher — only shows businesses the user is a member of #}
+    {% if user_memberships %}
+    <div class="dropdown me-2">
+      <button class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-shop"></i>
+        <span class="d-none d-md-inline">{{ current_business.name|default:'Select business' }}</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><h6 class="dropdown-header">{% trans "Your businesses" %}</h6></li>
+        {% for m in user_memberships %}
+        <li>
+          <form action="{% url 'businesses:switch_business' m.business_id %}" method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="dropdown-item {% if current_business and m.business_id == current_business.id %}active{% endif %}">
+              {{ m.business.name }} <span class="text-muted small">· {{ m.get_role_display }}</span>
+            </button>
+          </form>
+        </li>
+        {% endfor %}
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{% url 'businesses:onboarding' %}"><i class="bi bi-plus-lg"></i> {% trans "Add business" %}</a></li>
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="dropdown">
+      <button class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-person-circle"></i>
+        <span class="d-none d-md-inline">{{ user.get_short_name }}</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="bi bi-person"></i> {% trans "Profile" %}</a></li>
+        <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}"><i class="bi bi-key"></i> {% trans "Change password" %}</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+          <form action="{% url 'accounts:logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> {% trans "Logout" %}</button>
+          </form>
+        </li>
+      </ul>
+    </div>
+  </div>
+</header>

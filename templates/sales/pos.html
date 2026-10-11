@@ -1,0 +1,203 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "New Sale" %}{% endblock %}
+
+{% block content %}
+<input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h4 class="mb-0">{% trans "New Sale (POS)" %}</h4>
+  <a href="{% url 'sales:list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-receipt"></i> {% trans "All sales" %}</a>
+</div>
+
+<div class="row g-3">
+  <!-- Product search + results -->
+  <div class="col-lg-7">
+    <div class="mh-card p-3 mb-3">
+      <div class="input-group input-group-lg">
+        <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+        <input type="search" id="posSearch" class="form-control form-control-lg"
+               placeholder="{% trans 'Search or scan product…' %}" autocomplete="off" autofocus>
+      </div>
+    </div>
+    <div id="posResults" class="row g-2"></div>
+  </div>
+
+  <!-- Cart + checkout -->
+  <div class="col-lg-5">
+    <div class="mh-card p-3 mh-cart">
+      <h6 class="mb-3"><i class="bi bi-cart3"></i> {% trans "Cart" %}</h6>
+      <div id="cartItems" class="mh-cart-items"></div>
+      <div id="cartEmpty" class="text-muted text-center py-4">{% trans "Cart is empty. Tap a product to add." %}</div>
+
+      <div class="mh-cart-summary mt-3">
+        <div class="d-flex justify-content-between"><span>{% trans "Subtotal" %}</span><span id="sumSubtotal">{{ currency_symbol }}0.00</span></div>
+        <div class="d-flex justify-content-between text-muted"><span>{% trans "Tax" %}</span><span id="sumTax">{{ currency_symbol }}0.00</span></div>
+        <div class="d-flex justify-content-between align-items-center my-2">
+          <span>{% trans "Discount" %}</span>
+          <div class="input-group input-group-sm" style="max-width:130px">
+            <span class="input-group-text">{{ currency_symbol }}</span>
+            <input type="number" id="orderDiscount" class="form-control text-end" value="0" min="0" step="0.01">
+          </div>
+        </div>
+        <hr class="my-2">
+        <div class="d-flex justify-content-between fs-5 fw-bold"><span>{% trans "Total" %}</span><span id="sumTotal">{{ currency_symbol }}0.00</span></div>
+      </div>
+
+      <div class="mt-3">
+        <label class="form-label">{% trans "Customer" %} <span class="text-muted small">({% trans "required for udhaar" %})</span></label>
+        <select id="posCustomer" class="form-select mb-2">
+          <option value="">{% trans "Walk-in customer" %}</option>
+          {% for c in customers %}<option value="{{ c.id }}">{{ c.name }}{% if c.phone %} · {{ c.phone }}{% endif %}</option>{% endfor %}
+        </select>
+
+        <label class="form-label">{% trans "Payment method" %}</label>
+        <select id="posMethod" class="form-select mb-2">
+          {% for m in payment_methods %}<option value="{{ m.id }}" data-credit="{{ m.is_credit|yesno:'1,0' }}">{{ m.name }}</option>{% endfor %}
+        </select>
+
+        <label class="form-label">{% trans "Amount received" %}</label>
+        <div class="input-group mb-3">
+          <span class="input-group-text">{{ currency_symbol }}</span>
+          <input type="number" id="posPaid" class="form-control" value="0" min="0" step="0.01">
+          <button class="btn btn-outline-secondary" type="button" id="posExact">{% trans "Exact" %}</button>
+        </div>
+
+        <div id="posError" class="alert alert-danger py-2 d-none"></div>
+        <button id="posComplete" class="btn btn-primary btn-lg w-100" disabled>
+          <span class="mh-btn-label">{% trans "Complete Sale" %}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  "use strict";
+  const SYM = "{{ currency_symbol|escapejs }}";
+  const INCL_TAX = {{ current_business.prices_include_tax|yesno:"true,false" }};
+  const csrf = document.getElementById("csrfToken").value;
+  const cart = [];
+  const $ = (id) => document.getElementById(id);
+
+  const money = (n) => SYM + (Math.round((Number(n) + Number.EPSILON) * 100) / 100).toFixed(2);
+
+  // ---- Search (debounced) ----
+  let timer = null;
+  function search() {
+    const q = $("posSearch").value.trim();
+    fetch("{% url 'sales:pos_search' %}?q=" + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(d => renderResults(d.results));
+  }
+  $("posSearch").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(search, 200); });
+
+  function renderResults(items) {
+    const box = $("posResults");
+    box.innerHTML = "";
+    if (!items.length) { box.innerHTML = '<div class="col-12 text-muted p-3">{% trans "No products found." %}</div>'; return; }
+    items.forEach(p => {
+      const col = document.createElement("div");
+      col.className = "col-6 col-md-4";
+      col.innerHTML = `<button type="button" class="mh-prod-btn w-100">
+        <div class="fw-semibold text-truncate">${escapeHtml(p.name)}</div>
+        <div class="small text-muted">${money(p.price)} · ${escapeHtml(p.unit)}</div>
+        <div class="small ${Number(p.stock) <= 0 ? 'text-danger' : 'text-muted'}">${p.stock} ${escapeHtml(p.unit)}</div>
+      </button>`;
+      col.querySelector("button").addEventListener("click", () => addToCart(p));
+      box.appendChild(col);
+    });
+  }
+
+  function addToCart(p) {
+    let line = cart.find(l => l.id === p.id);
+    if (line) { line.qty += 1; }
+    else { cart.push({ id: p.id, name: p.name, price: Number(p.price), tax: Number(p.tax), unit: p.unit, qty: 1, discount: 0 }); }
+    renderCart();
+  }
+  function removeLine(id) { const i = cart.findIndex(l => l.id === id); if (i > -1) cart.splice(i, 1); renderCart(); }
+  function setQty(id, qty) { const l = cart.find(x => x.id === id); if (l) { l.qty = Math.max(0.001, Number(qty) || 0); renderCart(); } }
+
+  function lineNet(l) {
+    const gross = l.price * l.qty - (l.discount || 0);
+    if (INCL_TAX && l.tax > 0) return gross / (1 + l.tax / 100);
+    return gross;
+  }
+  function lineTax(l) {
+    if (INCL_TAX && l.tax > 0) { const gross = l.price * l.qty - (l.discount || 0); return gross - gross / (1 + l.tax / 100); }
+    return lineNet(l) * (l.tax || 0) / 100;
+  }
+
+  function renderCart() {
+    const box = $("cartItems");
+    box.innerHTML = "";
+    $("cartEmpty").style.display = cart.length ? "none" : "block";
+    cart.forEach(l => {
+      const row = document.createElement("div");
+      row.className = "mh-cart-row";
+      row.innerHTML = `
+        <div class="flex-grow-1">
+          <div class="fw-semibold">${escapeHtml(l.name)}</div>
+          <div class="small text-muted">${money(l.price)} × <input type="number" class="mh-qty" value="${l.qty}" min="0.001" step="1"> ${escapeHtml(l.unit)}</div>
+        </div>
+        <div class="text-end">
+          <div class="fw-semibold">${money(lineNet(l) + lineTax(l))}</div>
+          <button class="btn btn-sm btn-link text-danger p-0 mh-rm">{% trans "Remove" %}</button>
+        </div>`;
+      row.querySelector(".mh-qty").addEventListener("input", (e) => setQty(l.id, e.target.value));
+      row.querySelector(".mh-rm").addEventListener("click", () => removeLine(l.id));
+      box.appendChild(row);
+    });
+    recalc();
+  }
+
+  function recalc() {
+    const subtotal = cart.reduce((s, l) => s + lineNet(l), 0);
+    const tax = cart.reduce((s, l) => s + lineTax(l), 0);
+    const disc = Number($("orderDiscount").value) || 0;
+    const total = Math.max(0, subtotal + tax - disc);
+    $("sumSubtotal").textContent = money(subtotal);
+    $("sumTax").textContent = money(tax);
+    $("sumTotal").textContent = money(total);
+    $("posComplete").disabled = cart.length === 0;
+    return total;
+  }
+  $("orderDiscount").addEventListener("input", recalc);
+  $("posExact").addEventListener("click", () => { $("posPaid").value = recalc().toFixed(2); });
+
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+  // ---- Checkout ----
+  $("posComplete").addEventListener("click", () => {
+    const btn = $("posComplete");
+    const err = $("posError");
+    err.classList.add("d-none");
+    btn.disabled = true;
+
+    const payload = {
+      items: cart.map(l => ({ product: l.id, quantity: l.qty, unit_price: l.price, discount: l.discount || 0 })),
+      customer: $("posCustomer").value || null,
+      order_discount: Number($("orderDiscount").value) || 0,
+      payments: [{ method: Number($("posMethod").value), amount: Number($("posPaid").value) || 0 }],
+    };
+
+    fetch("{% url 'sales:pos_checkout' %}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (ok && d.redirect) { window.location = d.redirect; }
+        else { err.textContent = d.error || "{% trans 'Could not complete the sale.' %}"; err.classList.remove("d-none"); btn.disabled = false; }
+      })
+      .catch(() => { err.textContent = "{% trans 'Network error. Try again.' %}"; err.classList.remove("d-none"); btn.disabled = false; });
+  });
+
+  search();  // initial product list
+})();
+</script>
+{% endblock %}

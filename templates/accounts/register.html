@@ -1,0 +1,17 @@
+{% extends "layouts/auth_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Register" %}{% endblock %}
+
+{% block auth_content %}
+<h5 class="mb-3">{% trans "Create your Mera Hisaab account" %}</h5>
+{% include "components/form_errors.html" %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% for field in form %}{% include "components/field.html" with field=field %}{% endfor %}
+  <button type="submit" class="btn btn-primary w-100">{% trans "Register" %}</button>
+</form>
+<div class="text-center mt-3 small">
+  {% trans "Already have an account?" %} <a href="{% url 'accounts:login' %}">{% trans "Sign in" %}</a>
+</div>
+{% endblock %}

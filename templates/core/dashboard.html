@@ -1,0 +1,51 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Dashboard" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+  <div>
+    <h4 class="mb-0">{{ greeting }}, {{ user.get_short_name }} 👋</h4>
+    <div class="text-muted small">{{ current_business.name }} · {{ period_label }}</div>
+  </div>
+
+  <form method="get" class="d-flex align-items-center gap-2">
+    <label class="text-muted small mb-0">{% trans "Period" %}</label>
+    <select name="period" class="form-select form-select-sm" style="width:auto"
+            onchange="this.form.submit()">
+      {% for value, label in period_choices %}
+        <option value="{{ value }}" {% if period == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+{% with sym=current_business.currency_symbol %}
+<div class="row g-3 mb-1">
+  {% include "components/dashboard_card.html" with card_label=_("Sales") card_number=metrics.sales_total card_prefix=sym card_icon="bi-cart-check" card_variant="success" %}
+  {% include "components/dashboard_card.html" with card_label=_("Purchases") card_number=metrics.purchases_total card_prefix=sym card_icon="bi-truck" card_variant="info" %}
+  {% include "components/dashboard_card.html" with card_label=_("Expenses") card_number=metrics.expenses_total card_prefix=sym card_icon="bi-wallet2" card_variant="warning" %}
+  {% include "components/dashboard_card.html" with card_label=_("Profit") card_number=metrics.profit_total card_prefix=sym card_icon="bi-graph-up-arrow" card_variant="primary" %}
+</div>
+
+<div class="row g-3">
+  {% include "components/dashboard_card.html" with card_label=_("Customers") card_number=metrics.total_customers card_icon="bi-people" card_variant="primary" %}
+  {% include "components/dashboard_card.html" with card_label=_("Pending Udhaar") card_number=metrics.pending_udhaar card_prefix=sym card_icon="bi-cash-stack" card_variant="danger" %}
+  {% include "components/dashboard_card.html" with card_label=_("Products") card_number=metrics.total_products card_icon="bi-box-seam" card_variant="info" %}
+  {% include "components/dashboard_card.html" with card_label=_("Low Stock") card_number=metrics.low_stock_count card_icon="bi-exclamation-triangle" card_variant="warning" %}
+</div>
+{% endwith %}
+
+<div class="mh-card mt-4 p-4">
+  <h6 class="mb-3"><i class="bi bi-rocket-takeoff"></i> {% trans "Get started" %}</h6>
+  <p class="text-muted mb-3">
+    {% trans "Your shop is set up. As you add products, record sales and purchases, these cards will fill with your real hisaab — nothing here is a demo number." %}
+  </p>
+  <ol class="mh-getting-started">
+    <li>{% trans "Add your product categories and products" %} <span class="mh-soon">Phase 2</span></li>
+    <li>{% trans "Add customers and track udhaar" %} <span class="mh-soon">Phase 3</span></li>
+    <li>{% trans "Start selling from the POS" %} <span class="mh-soon">Phase 4</span></li>
+  </ol>
+</div>
+{% endblock %}

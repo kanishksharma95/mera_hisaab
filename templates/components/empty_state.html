@@ -1,0 +1,23 @@
+{# Params: empty_title, empty_text, empty_action_url, empty_action_label, empty_icon (optional bootstrap icon override) #}
+<div class="mh-empty text-center py-5 mh-animate-in">
+  {% if empty_icon %}
+    <div class="mh-empty-icon"><i class="bi {{ empty_icon }}"></i></div>
+  {% else %}
+    <svg class="mh-empty-illustration" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <ellipse cx="100" cy="140" rx="70" ry="10" fill="#e2e8f0"/>
+      <rect x="46" y="66" width="108" height="66" rx="8" fill="#ccfbf1" stroke="#14b8a6" stroke-width="2"/>
+      <path d="M40 66l10-22a6 6 0 015.5-3.6h89a6 6 0 015.5 3.6L165 66" stroke="#0f766e" stroke-width="2" fill="#fff"/>
+      <path d="M40 66h125" stroke="#0f766e" stroke-width="2"/>
+      <rect x="86" y="66" width="28" height="20" rx="3" fill="#14b8a6"/>
+      <circle cx="100" cy="104" r="14" fill="#fff" stroke="#0f766e" stroke-width="2"/>
+      <path d="M100 98v12M94 104h12" stroke="#0f766e" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  {% endif %}
+  <h5 class="mt-3">{{ empty_title|default:'Nothing here yet' }}</h5>
+  {% if empty_text %}<p class="text-muted">{{ empty_text }}</p>{% endif %}
+  {% if empty_action_url %}
+    <a href="{{ empty_action_url }}" class="btn btn-primary mt-2">
+      <i class="bi bi-plus-lg"></i> {{ empty_action_label|default:'Add new' }}
+    </a>
+  {% endif %}
+</div>

@@ -1,0 +1,65 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{{ supplier.name }}{% endblock %}
+
+{% block content %}
+{% with sym=current_business.currency_symbol %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <a href="{% url 'suppliers:list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="mb-0">{{ supplier.name }}</h4>
+  {% if supplier.phone %}<span class="text-muted"><i class="bi bi-telephone"></i> {{ supplier.phone }}</span>{% endif %}
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'suppliers:edit' supplier.pk %}" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> {% trans "Edit" %}</a>
+    <a href="{% url 'suppliers:payment' supplier.pk %}" class="btn btn-success"><i class="bi bi-cash-coin"></i> {% trans "Record payment" %}</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-2">
+  {% include "components/dashboard_card.html" with card_label=_("Payable") card_number=supplier.current_balance card_prefix=sym card_decimals=2 card_icon="bi-cash-stack" card_variant="danger" %}
+  {% include "components/dashboard_card.html" with card_label=_("Total billed") card_number=totals.total_billed card_prefix=sym card_decimals=2 card_icon="bi-receipt" card_variant="warning" %}
+  {% include "components/dashboard_card.html" with card_label=_("Total paid") card_number=totals.total_paid card_prefix=sym card_decimals=2 card_icon="bi-arrow-down-circle" card_variant="success" %}
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-lg-7">
+    <div class="mh-card p-0">
+      <div class="p-3 border-bottom"><h6 class="mb-0">{% trans "Ledger" %}</h6></div>
+      {% if entries %}
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>{% trans "Date" %}</th><th>{% trans "Description" %}</th><th class="text-end">{% trans "Bill" %}</th><th class="text-end">{% trans "Paid" %}</th><th class="text-end">{% trans "Balance" %}</th></tr></thead>
+          <tbody>
+            {% for e in entries %}
+            <tr>
+              <td class="small">{{ e.created_at|date:"d M Y" }}</td>
+              <td>{{ e.description }}{% if e.method %} <span class="badge text-bg-light">{{ e.method }}</span>{% endif %}</td>
+              <td class="text-end text-danger">{% if e.entry_type == 'bill' %}{{ sym }}{{ e.amount|floatformat:2|intcomma }}{% endif %}</td>
+              <td class="text-end text-success">{% if e.entry_type == 'payment' %}{{ sym }}{{ e.amount|floatformat:2|intcomma }}{% endif %}</td>
+              <td class="text-end fw-semibold">{{ sym }}{{ e.balance_after|floatformat:2|intcomma }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<div class="p-4 text-center text-muted">{% trans "No transactions yet." %}</div>{% endif %}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="mh-card p-0">
+      <div class="p-3 border-bottom"><h6 class="mb-0">{% trans "Recent purchases" %}</h6></div>
+      {% if purchases %}
+      <div class="list-group list-group-flush">
+        {% for p in purchases %}
+        <a href="{% url 'purchases:detail' p.pk %}" class="list-group-item d-flex justify-content-between">
+          <span>{{ p.number }} <span class="small text-muted">{{ p.created_at|date:"d M Y" }}</span></span>
+          <span class="fw-semibold">{{ sym }}{{ p.total|floatformat:2|intcomma }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}<div class="p-4 text-center text-muted">{% trans "No purchases yet." %}</div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}

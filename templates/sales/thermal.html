@@ -1,0 +1,174 @@
+{% load i18n humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Receipt - {{ sale.invoice_number }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    @page {
+      margin: 0;
+      size: 80mm auto;
+    }
+    body {
+      font-family: 'Courier New', Courier, monospace, system-ui;
+      font-size: 13px;
+      line-height: 1.3;
+      margin: 0;
+      padding: 10px;
+      color: #000;
+      background: #fff;
+      width: 78mm;
+      box-sizing: border-box;
+    }
+    .text-center { text-align: center; }
+    .text-end { text-align: right; }
+    .text-start { text-align: left; }
+    .bold { font-weight: bold; }
+    .divider {
+      border-top: 1px dashed #000;
+      margin: 6px 0;
+    }
+    .double-divider {
+      border-top: 2px dashed #000;
+      margin: 6px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 3px 0;
+      vertical-align: top;
+    }
+    .no-print {
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    .btn-print {
+      background: #000;
+      color: #fff;
+      border: none;
+      padding: 6px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    @media print {
+      .no-print { display: none; }
+      body { width: 100%; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button class="btn-print" onclick="window.print()">🖨️ Print Slip</button>
+  </div>
+
+  <div class="text-center">
+    <div class="bold" style="font-size: 16px;">{{ business.name|upper }}</div>
+    {% if business.address %}<div>{{ business.address }}</div>{% endif %}
+    {% if business.city %}<div>{{ business.city }}{% if business.pincode %} - {{ business.pincode }}{% endif %}</div>{% endif %}
+    {% if business.phone %}<div>Tel: {{ business.phone }}</div>{% endif %}
+    {% if business.gst_number %}<div class="bold">GSTIN: {{ business.gst_number }}</div>{% endif %}
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div><strong>Bill No:</strong> {{ sale.invoice_number }}</div>
+    <div><strong>Date:</strong> {{ sale.created_at|date:"d-m-Y H:i" }}</div>
+    {% if sale.customer %}
+      <div><strong>Customer:</strong> {{ sale.customer.name }}</div>
+      {% if sale.customer.phone %}<div><strong>Phone:</strong> {{ sale.customer.phone }}</div>{% endif %}
+    {% endif %}
+  </div>
+
+  <div class="divider"></div>
+
+  <table>
+    <thead>
+      <tr class="bold">
+        <th class="text-start">Item</th>
+        <th class="text-center">Qty</th>
+        <th class="text-end">Price</th>
+        <th class="text-end">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in sale.items.all %}
+      <tr>
+        <td class="text-start" colspan="4">
+          <div class="bold">{{ it.product_name }}</div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>&nbsp;</span>
+            <span>{{ it.quantity|floatformat:"-2" }} &times; {{ it.unit_price|floatformat:2 }}</span>
+            <span class="bold">{{ it.line_total|floatformat:2 }}</span>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <table>
+    <tr>
+      <td>Subtotal:</td>
+      <td class="text-end bold">{{ business.currency_symbol }}{{ sale.subtotal|floatformat:2 }}</td>
+    </tr>
+    {% if sale.discount_total %}
+    <tr>
+      <td>Discount:</td>
+      <td class="text-end bold">-{{ business.currency_symbol }}{{ sale.discount_total|floatformat:2 }}</td>
+    </tr>
+    {% endif %}
+    {% if sale.tax_total %}
+    <tr>
+      <td>GST Tax:</td>
+      <td class="text-end bold">{{ business.currency_symbol }}{{ sale.tax_total|floatformat:2 }}</td>
+    </tr>
+    {% endif %}
+    <tr style="font-size: 14px;">
+      <td class="bold">GRAND TOTAL:</td>
+      <td class="text-end bold">{{ business.currency_symbol }}{{ sale.total|floatformat:2 }}</td>
+    </tr>
+    <tr>
+      <td>Paid Amount:</td>
+      <td class="text-end bold">{{ business.currency_symbol }}{{ sale.paid_amount|floatformat:2 }}</td>
+    </tr>
+    {% if sale.due_amount %}
+    <tr class="bold" style="color: #b00;">
+      <td>Pending Udhaar:</td>
+      <td class="text-end">{{ business.currency_symbol }}{{ sale.due_amount|floatformat:2 }}</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  <div class="double-divider"></div>
+
+  {% if sale.payments.all %}
+  <div>
+    <strong>Payment Details:</strong>
+    {% for p in sale.payments.all %}
+      <div>- {{ p.method.name }}: {{ business.currency_symbol }}{{ p.amount|floatformat:2 }}</div>
+    {% endfor %}
+  </div>
+  <div class="divider"></div>
+  {% endif %}
+
+  <div class="text-center" style="margin-top: 8px;">
+    <div class="bold">THANK YOU! VISIT AGAIN</div>
+    <div style="font-size: 11px; margin-top: 4px;">Powered by Mera Hisaab</div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      // Auto open print dialog when opened
+      window.print();
+    };
+  </script>
+</body>
+</html>

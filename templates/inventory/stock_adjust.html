@@ -1,0 +1,25 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Adjust stock" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'products:detail' product.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="mb-0">{% trans "Adjust stock" %} · {{ product.name }}</h4>
+</div>
+
+<div class="mh-card p-4" style="max-width:520px">
+  <p class="text-muted">
+    {% trans "Current stock" %}: <strong>{{ product.current_stock|floatformat:"-3" }} {{ product.unit }}</strong>.
+    {% trans "Set the correct quantity below — the change is recorded as an adjustment in the stock history." %}
+  </p>
+  {% include "components/form_errors.html" %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% for field in form %}{% include "components/field.html" with field=field %}{% endfor %}
+    <button type="submit" class="btn btn-primary">{% trans "Update stock" %}</button>
+    <a href="{% url 'products:detail' product.pk %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Invoice" %} {{ sale.invoice_number }}{% endblock %}
+
+{% block content %}
+{% with sym=business.currency_symbol %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 mh-no-print">
+  {% if public %}
+    <div class="mh-brand"><span class="mh-brand-mark">MH</span><span class="mh-brand-name">{{ APP_NAME }}</span></div>
+  {% else %}
+    <a href="{% url 'sales:pos' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-plus-lg"></i> {% trans "New sale" %}</a>
+  {% endif %}
+  <div class="d-flex gap-2">
+    <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer"></i> {% trans "Print" %}</button>
+    {% if not public %}
+      <a href="{% url 'sales:thermal' sale.pk %}" target="_blank" class="btn btn-outline-dark"><i class="bi bi-receipt"></i> {% trans "POS Slip" %}</a>
+      <a href="{% url 'sales:invoice_pdf' sale.pk %}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+      <a href="{{ whatsapp_url }}" target="_blank" rel="noopener" class="btn btn-success"><i class="bi bi-whatsapp"></i> {% trans "Share" %}</a>
+    {% endif %}
+  </div>
+
+</div>
+
+<div class="mh-card p-4 mh-invoice">
+  <div class="mh-invoice-head mb-4">
+    <div>
+      {% if business.logo %}<img src="{{ business.logo.url }}" style="max-height:60px" class="mb-2"><br>{% endif %}
+      <h4 class="mb-1">{{ business.name }}</h4>
+      <div class="small text-muted">
+        {% if business.address %}{{ business.address }}<br>{% endif %}
+        {% if business.city %}{{ business.city }}{% if business.state %}, {{ business.state }}{% endif %} {{ business.pincode }}<br>{% endif %}
+        {% if business.phone %}📞 {{ business.phone }}<br>{% endif %}
+        {% if business.gst_number %}GSTIN: {{ business.gst_number }}{% endif %}
+      </div>
+    </div>
+    <div class="text-end">
+      <h5 class="mb-1">{% trans "INVOICE" %}</h5>
+      <div class="fw-semibold">{{ sale.invoice_number }}</div>
+      <div class="small text-muted">{{ sale.created_at|date:"d M Y, H:i" }}</div>
+      <span class="badge {% if sale.payment_status == 'paid' %}text-bg-success{% elif sale.payment_status == 'partial' %}text-bg-warning{% else %}text-bg-danger{% endif %} mt-2">
+        {{ sale.get_payment_status_display }}
+      </span>
+    </div>
+  </div>
+
+  {% if sale.customer %}
+  <div class="mb-3">
+    <div class="small text-muted">{% trans "Bill to" %}</div>
+    <div class="fw-semibold">{{ sale.customer.name }}</div>
+    {% if sale.customer.phone %}<div class="small">{{ sale.customer.phone }}</div>{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>{% trans "Item" %}</th>
+          <th class="text-end">{% trans "Qty" %}</th>
+          <th class="text-end">{% trans "Price" %}</th>
+          <th class="text-end">{% trans "Tax" %}</th>
+          <th class="text-end">{% trans "Total" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in sale.items.all %}
+        <tr>
+          <td>{{ item.product_name }}</td>
+          <td class="text-end">{{ item.quantity|floatformat:"-3" }}</td>
+          <td class="text-end">{{ sym }}{{ item.unit_price|floatformat:2|intcomma }}</td>
+          <td class="text-end">{% if item.tax_percent %}{{ item.tax_percent|floatformat:"-2" }}%{% else %}—{% endif %}</td>
+          <td class="text-end">{{ sym }}{{ item.line_total|floatformat:2|intcomma }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="row">
+    <div class="col-6"></div>
+    <div class="col-6">
+      <div class="d-flex justify-content-between"><span>{% trans "Subtotal" %}</span><span>{{ sym }}{{ sale.subtotal|floatformat:2|intcomma }}</span></div>
+      {% if sale.discount_total %}<div class="d-flex justify-content-between text-muted"><span>{% trans "Discount" %}</span><span>−{{ sym }}{{ sale.discount_total|floatformat:2|intcomma }}</span></div>{% endif %}
+      {% if sale.tax_total %}<div class="d-flex justify-content-between text-muted"><span>{% trans "Tax" %}</span><span>{{ sym }}{{ sale.tax_total|floatformat:2|intcomma }}</span></div>{% endif %}
+      <hr class="my-2">
+      <div class="d-flex justify-content-between fs-5 fw-bold"><span>{% trans "Total" %}</span><span>{{ sym }}{{ sale.total|floatformat:2|intcomma }}</span></div>
+      <div class="d-flex justify-content-between text-success"><span>{% trans "Paid" %}</span><span>{{ sym }}{{ sale.paid_amount|floatformat:2|intcomma }}</span></div>
+      {% if sale.due_amount %}<div class="d-flex justify-content-between text-danger fw-semibold"><span>{% trans "Pending udhaar" %}</span><span>{{ sym }}{{ sale.due_amount|floatformat:2|intcomma }}</span></div>{% endif %}
+
+      {% if razorpay_enabled %}
+      <div class="d-grid mt-3 mh-no-print">
+        <button id="mh-pay-now" type="button" class="btn btn-success btn-lg">
+          <i class="bi bi-shield-lock"></i> {% trans "Pay" %} {{ sym }}{{ sale.due_amount|floatformat:2|intcomma }} {% trans "online" %}
+        </button>
+        <div class="form-text text-center">{% trans "Secured by Razorpay" %}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="text-center small text-muted mt-4 pt-3 border-top">
+    {% trans "Thank you for your business!" %} · <strong>Powered by {{ APP_NAME }}</strong>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}
+
+{% block extra_js %}
+{% if razorpay_enabled %}
+{# Razorpay Checkout must be loaded from Razorpay's own CDN. #}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+(function () {
+  var btn = document.getElementById("mh-pay-now");
+  if (!btn) return;
+
+  function getCookie(name) {
+    var m = document.cookie.match("(^|;)\\s*" + name + "\\s*=\\s*([^;]+)");
+    return m ? m.pop() : "";
+  }
+
+  btn.addEventListener("click", function () {
+    btn.disabled = true;
+    btn.textContent = "{% trans 'Starting…' %}";
+    fetch("{% url 'payments:invoice_order' sale.public_token %}", {
+      method: "POST",
+      headers: { "X-CSRFToken": getCookie("csrftoken") },
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok) { throw new Error(res.d.error || "Could not start payment."); }
+        var d = res.d;
+        var rzp = new Razorpay({
+          key: d.key_id,
+          order_id: d.order_id,
+          amount: d.amount,
+          currency: d.currency,
+          name: d.name,
+          description: d.description,
+          prefill: d.prefill,
+          theme: { color: "#0f766e" },
+          handler: function (resp) {
+            // Post the signed result back for server-side verification.
+            var f = document.createElement("form");
+            f.method = "POST";
+            f.action = "{% url 'payments:invoice_callback' sale.public_token %}";
+            var fields = {
+              csrfmiddlewaretoken: getCookie("csrftoken"),
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_signature: resp.razorpay_signature,
+            };
+            Object.keys(fields).forEach(function (k) {
+              var i = document.createElement("input");
+              i.type = "hidden"; i.name = k; i.value = fields[k]; f.appendChild(i);
+            });
+            document.body.appendChild(f);
+            f.submit();
+          },
+          modal: {
+            ondismiss: function () {
+              btn.disabled = false;
+              btn.innerHTML = '<i class="bi bi-shield-lock"></i> {% trans "Pay online" %}';
+            },
+          },
+        });
+        rzp.open();
+      })
+      .catch(function (e) {
+        alert(e.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-shield-lock"></i> {% trans "Pay online" %}';
+      });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n %}
+
+{% block title %}{% if is_edit %}{% trans "Edit Payment Method" %}{% else %}{% trans "Add Payment Method" %}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{% url 'payments:method_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+  <h4 class="mb-0">{% if is_edit %}{% trans "Edit Payment Method" %}{% else %}{% trans "Add Payment Method" %}{% endif %}</h4>
+</div>
+
+<div class="mh-card p-4" style="max-width:560px">
+  {% include "components/form_errors.html" %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "components/field.html" with field=form.name %}
+    <div class="row">
+      <div class="col-8">{% include "components/field.html" with field=form.is_cash_like %}</div>
+      <div class="col-4">{% include "components/field.html" with field=form.sort_order %}</div>
+    </div>
+    <button type="submit" class="btn btn-primary">{% if is_edit %}{% trans "Save changes" %}{% else %}{% trans "Add method" %}{% endif %}</button>
+    <a href="{% url 'payments:method_list' %}" class="btn btn-outline-secondary">{% trans "Cancel" %}</a>
+  </form>
+</div>
+{% endblock %}

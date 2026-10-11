@@ -1,0 +1,56 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Payment Methods" %}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div>
+    <h4 class="mb-0">{% trans "Payment Methods" %}</h4>
+    <div class="text-muted small">{% trans "How your business receives and pays money." %}</div>
+  </div>
+  <a href="{% url 'payments:method_add' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> {% trans "Add Method" %}</a>
+</div>
+
+<div class="mh-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>{% trans "Method" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th class="text-center">{% trans "Status" %}</th>
+          <th class="text-end"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in methods %}
+        <tr>
+          <td class="fw-semibold">{{ m.name }}</td>
+          <td>
+            {% if m.is_credit %}<span class="badge text-bg-warning">{% trans "Credit / Udhaar" %}</span>
+            {% elif m.is_cash_like %}<span class="badge text-bg-success-subtle text-success">{% trans "Cash-like" %}</span>
+            {% else %}<span class="badge text-bg-secondary">{% trans "Non-cash" %}</span>{% endif %}
+          </td>
+          <td class="text-center">
+            {% if m.is_active %}<span class="badge text-bg-primary">{% trans "Active" %}</span>
+            {% else %}<span class="badge text-bg-secondary">{% trans "Inactive" %}</span>{% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'payments:method_edit' m.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="{% url 'payments:method_toggle' m.pk %}" class="d-inline">
+              {% csrf_token %}
+              {% if m.is_active %}
+                <button class="btn btn-sm btn-outline-danger" type="submit">{% trans "Deactivate" %}</button>
+              {% else %}
+                <button class="btn btn-sm btn-outline-success" type="submit">{% trans "Activate" %}</button>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

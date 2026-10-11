@@ -1,0 +1,54 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Purchases" %}{% endblock %}
+
+{% block content %}
+{% with sym=current_business.currency_symbol %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h4 class="mb-0">{% trans "Purchases" %}</h4>
+  <a href="{% url 'purchases:add' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> {% trans "New Purchase" %}</a>
+</div>
+
+<form method="get" class="mh-card p-3 mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-12 col-md-7"><label class="form-label">{% trans "Search" %}</label>
+      <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="{% trans 'Purchase no., supplier, bill no.' %}"></div>
+    <div class="col-8 col-md-3"><label class="form-label">{% trans "Payment" %}</label>
+      <select name="status" class="form-select">
+        <option value="">{% trans "All" %}</option>
+        <option value="paid" {% if status == 'paid' %}selected{% endif %}>{% trans "Paid" %}</option>
+        <option value="partial" {% if status == 'partial' %}selected{% endif %}>{% trans "Partial" %}</option>
+        <option value="unpaid" {% if status == 'unpaid' %}selected{% endif %}>{% trans "Unpaid" %}</option>
+      </select></div>
+    <div class="col-4 col-md-2 d-grid"><button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button></div>
+  </div>
+</form>
+
+{% if page_obj.object_list %}
+<div class="mh-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr><th>{% trans "Purchase" %}</th><th>{% trans "Date" %}</th><th>{% trans "Supplier" %}</th><th class="text-end">{% trans "Total" %}</th><th class="text-end">{% trans "Due" %}</th><th></th></tr></thead>
+      <tbody>
+        {% for p in page_obj.object_list %}
+        <tr>
+          <td><a href="{% url 'purchases:detail' p.pk %}" class="fw-semibold text-decoration-none">{{ p.number }}</a>
+            {% if p.supplier_invoice %}<div class="small text-muted">{% trans "Bill" %} {{ p.supplier_invoice }}</div>{% endif %}</td>
+          <td class="small text-muted">{{ p.created_at|date:"d M Y" }}</td>
+          <td>{{ p.supplier.name|default:"—" }}</td>
+          <td class="text-end">{{ sym }}{{ p.total|floatformat:2|intcomma }}</td>
+          <td class="text-end {% if p.due_amount %}text-danger{% endif %}">{{ sym }}{{ p.due_amount|floatformat:2|intcomma }}</td>
+          <td class="text-end"><a href="{% url 'purchases:detail' p.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-eye"></i></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "components/pagination.html" %}
+{% else %}
+  {% include "components/empty_state.html" with empty_icon="bi-truck" empty_title=_("No purchases yet") empty_text=_("Record a purchase to add stock and track supplier payables.") empty_action_url="/purchases/new/" empty_action_label=_("New Purchase") %}
+{% endif %}
+{% endwith %}
+{% endblock %}

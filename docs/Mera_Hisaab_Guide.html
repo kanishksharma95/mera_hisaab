@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: a4; margin: 1.6cm; }
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; color: #1f2937; line-height: 1.5; }
+  h1 { font-size: 26px; color: #0f766e; margin: 0 0 2px; }
+  h2 { font-size: 16px; color: #0f766e; border-bottom: 2px solid #0f766e; padding-bottom: 3px; margin-top: 22px; }
+  h3 { font-size: 13px; color: #0b5a54; margin-top: 14px; margin-bottom: 2px; }
+  .tag { color: #6b7280; font-style: italic; margin: 0 0 10px; }
+  .mark { display:inline-block; background:#0f766e; color:#fff; font-weight:bold; padding:4px 8px; border-radius:6px; letter-spacing:1px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  th { background: #0f766e; color: #fff; text-align: left; padding: 5px 7px; font-size: 10px; }
+  td { border-bottom: 1px solid #e5e7eb; padding: 5px 7px; vertical-align: top; }
+  code { background: #f1f5f9; padding: 1px 4px; border-radius: 3px; font-family: Consolas, monospace; font-size: 10px; }
+  ol, ul { margin: 4px 0 8px 0; padding-left: 18px; }
+  li { margin-bottom: 3px; }
+  .box { background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 6px; padding: 8px 10px; margin: 8px 0; }
+  .muted { color: #6b7280; }
+  .ok { color: #15803d; font-weight: bold; }
+  .todo { color: #b45309; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<p><span class="mark">MH</span></p>
+<h1>Mera Hisaab</h1>
+<p class="tag">Apni Dukaan, Apna Hisaab. &mdash; A digital hisaab-kitaab partner for every local shop.</p>
+<p class="muted">Project &amp; User Guide &nbsp;|&nbsp; Version: Phases 1&ndash;5 complete &nbsp;|&nbsp; 69 automated tests passing</p>
+
+<h2>1. What is Mera Hisaab?</h2>
+<p>A simple, mobile-first business-management (ERP) web app for Indian local shops. One shopkeeper can manage
+products, sales/billing, purchases, stock, customers, udhaar (credit), suppliers, and profit &mdash; all from one place.
+It is a <b>multi-tenant SaaS</b>: one application safely serves thousands of independent shops, and each shop's data is
+completely isolated from every other shop.</p>
+<p>Everything is <b>dynamic and database-driven</b> &mdash; no hardcoded shops, products, prices, categories, payment
+methods, or dashboard numbers. Every figure you see is calculated live from the database.</p>
+
+<h2>2. Technology</h2>
+<table>
+  <tr><th>Layer</th><th>Technology</th></tr>
+  <tr><td>Backend</td><td>Python + Django 5.2 (Django ORM)</td></tr>
+  <tr><td>Database</td><td>PostgreSQL (production target); SQLite for quick local development</td></tr>
+  <tr><td>Frontend</td><td>Django templates + Bootstrap 5 + HTMX + a little vanilla JavaScript</td></tr>
+  <tr><td>PDF invoices</td><td>xhtml2pdf</td></tr>
+  <tr><td>Fonts/assets</td><td>Self-hosted (Inter, Noto Sans Devanagari, Bootstrap, HTMX) &mdash; no external CDNs</td></tr>
+</table>
+
+<h2>3. How to run the app</h2>
+<ol>
+  <li>Open a terminal in the project folder <code>C:\Users\Kanishak\Desktop\mera_hisaab</code>.</li>
+  <li>Create an admin login (one time): <code>.\venv\Scripts\python.exe manage.py createsuperuser</code></li>
+  <li>Start the server: <code>.\venv\Scripts\python.exe manage.py runserver</code></li>
+  <li>Open <code>http://127.0.0.1:8000/</code> in your browser.</li>
+</ol>
+<div class="box"><b>Database:</b> The app currently uses a SQLite file, <code>db.sqlite3</code>, in the project folder
+(created automatically). To switch to PostgreSQL, set <code>USE_SQLITE=0</code> and the <code>POSTGRES_*</code> values in
+the <code>.env</code> file, then run <code>migrate</code>. View data anytime via the Admin panel, or open
+<code>db.sqlite3</code> in <b>DBeaver</b> (New Connection &rarr; SQLite &rarr; pick the file).</div>
+
+<h2>4. First-time flow</h2>
+<p>Register &rarr; Create your business (onboarding) &rarr; Pick business type &rarr; Dashboard &rarr; Add products &rarr;
+Add customers &rarr; Purchase stock &rarr; Make sales. Stock, udhaar, and profit all update automatically.</p>
+
+<h2>5. Feature guide (how to use each part)</h2>
+
+<h3>Login &amp; business</h3>
+<p>Log in with your <b>email</b> and password. You can own or belong to several shops; switch between them from the
+<b>business dropdown</b> in the top bar. Toggle <b>dark mode</b> with the moon icon.</p>
+
+<h3>Dashboard</h3>
+<p>Live cards: Today's Sales, Purchases, Expenses, Profit, Customers, Pending Udhaar, Products, Low Stock. Use the
+<b>Period</b> filter (Today / Week / Month / Custom, etc.) to change the range. All numbers are real, from your data.</p>
+
+<h3>Products &amp; Categories</h3>
+<ol>
+  <li><b>Products &rarr; Add Product</b>: name, SKU, barcode, prices (purchase &amp; selling), tax %, unit, minimum stock, image, and an <b>opening stock</b>.</li>
+  <li>Extra fields appear automatically based on your <b>business type</b> (e.g. a Mobile shop sees IMEI/Model; Garments sees Size/Color).</li>
+  <li><b>Categories</b>: group products (e.g. Rice, Snacks). Products and categories can be deactivated (soft-delete), never lost.</li>
+</ol>
+
+<h3>Inventory</h3>
+<p>An overview of stock on hand, minimum level, and stock value. The <b>Low stock</b> button filters items at/below their
+minimum so you know what to reorder. Use <b>Adjust</b> to correct a quantity (breakage, counting) &mdash; it records an
+adjustment in the item's history. Normally stock moves by itself: purchases increase it, sales decrease it.</p>
+
+<h3>Customers &amp; Udhaar (Khata)</h3>
+<ol>
+  <li><b>Customers &rarr; Add Customer</b> (name, phone, credit limit, notes).</li>
+  <li>Each customer has a <b>ledger</b>: a positive balance means they owe you (udhaar).</li>
+  <li><b>Add udhaar</b> increases their balance; <b>Record payment</b> reduces it. Over-payment becomes an advance.</li>
+  <li><b>Udhaar</b> page: all customers who owe money, most-owed first, with total outstanding and one-click Collect.</li>
+</ol>
+
+<h3>POS / Sales (billing)</h3>
+<ol>
+  <li>Open <b>POS / Sales</b> (or the Sell tab on mobile). Search or scan a product and tap to add it to the cart.</li>
+  <li>Adjust quantity and discount. Choose a <b>customer</b> (needed if any amount stays on udhaar) and a <b>payment method</b>.</li>
+  <li>Click <b>Complete Sale</b>. The app then, in one safe step: creates the invoice, reduces stock, records the payment,
+      puts any unpaid balance on the customer's udhaar, and calculates profit.</li>
+  <li>On the invoice you can <b>Print</b>, download <b>PDF</b>, or <b>Share on WhatsApp</b> (a link with the invoice summary
+      and a public view page, ending with &ldquo;Powered by Mera Hisaab&rdquo;).</li>
+</ol>
+<div class="box">All money is calculated on the server (never trusted from the browser), using exact decimals. Invoice
+numbers like <code>MH-2026-000001</code> are generated per shop, in order, with no duplicates.</div>
+
+<h3>Suppliers &amp; Purchases</h3>
+<ol>
+  <li><b>Suppliers &rarr; Add Supplier</b>. Each supplier has a payable ledger (what you owe them).</li>
+  <li><b>Purchases &rarr; New Purchase</b>: add products with quantity and cost, choose the supplier and how much you paid now.</li>
+  <li>On save: <b>stock increases automatically</b>, the product's cost is updated (for accurate profit), and any unpaid
+      amount becomes <b>supplier payable</b>. Pay it later from the supplier's page.</li>
+</ol>
+
+<h3>Payment methods</h3>
+<p>Each shop gets an editable set (Cash, UPI, Card, Bank Transfer, Credit/Udhaar, Other). Choosing Credit/Udhaar sends the
+amount to the customer's khata instead of counting it as received. These are stored in the database, not hardcoded.</p>
+
+<h3>Super Admin panel</h3>
+<p>At <code>/admin/</code> (needs a superuser account). This is the platform-owner view: manage shops, users, business
+types &amp; their dynamic fields, and inspect all records. Money fields are read-only there on purpose &mdash; they change
+only through the app's logic.</p>
+
+<h2>6. Security &amp; correctness</h2>
+<ul>
+  <li><b>Tenant isolation</b>: every record belongs to a business; the active shop comes from your logged-in session, never
+      from a browser-supplied id. Automated tests confirm one shop cannot see or touch another shop's data.</li>
+  <li><b>Money</b>: stored as exact decimals (never floating point); all totals, tax, discounts and balances computed on the backend.</li>
+  <li><b>Consistency</b>: sales, purchases, and ledger updates run inside atomic, row-locked transactions &mdash; they either
+      complete fully or roll back; stock and balances never drift.</li>
+  <li>CSRF protection, secure password hashing, and Django's ORM (no raw SQL) are used throughout.</li>
+</ul>
+
+<h2>7. What is built vs. planned</h2>
+<table>
+  <tr><th>Phase</th><th>Scope</th><th>Status</th></tr>
+  <tr><td>1</td><td>Auth, business onboarding, multi-tenancy, dashboard, admin</td><td class="ok">Done</td></tr>
+  <tr><td>2</td><td>Products, categories, dynamic fields, inventory ledger, low stock</td><td class="ok">Done</td></tr>
+  <tr><td>3</td><td>Customers, udhaar ledger, payments</td><td class="ok">Done</td></tr>
+  <tr><td>4</td><td>POS/Sales, payments, invoices (print/PDF/WhatsApp)</td><td class="ok">Done</td></tr>
+  <tr><td>5</td><td>Suppliers, purchases, auto stock-in, payables</td><td class="ok">Done</td></tr>
+  <tr><td>6</td><td>Expenses + true net Profit &amp; Loss (Sales &minus; COGS &minus; Expenses)</td><td class="todo">Next</td></tr>
+  <tr><td>7</td><td>Reports + full GST + CSV/PDF export + global search</td><td class="todo">Planned</td></tr>
+  <tr><td>8</td><td>Roles &amp; permissions (RBAC), audit log, notifications</td><td class="todo">Planned</td></tr>
+  <tr><td>9</td><td>Subscription plans (SaaS monetization)</td><td class="todo">Planned</td></tr>
+  <tr><td>10</td><td>PWA/offline, REST API, Docker, deployment hardening</td><td class="todo">Planned</td></tr>
+</table>
+
+<h2>8. Known limitations (today)</h2>
+<ul>
+  <li>No sale/purchase return or cancel yet (documents are immutable once posted).</li>
+  <li>GST is a single tax rate per product; full CGST/SGST/IGST + HSN is Phase 7.</li>
+  <li>WhatsApp shares a link (not an attached PDF file) &mdash; a platform limitation without the WhatsApp Business API.</li>
+  <li>Roles are shop-level (owner/staff) for now; fine-grained permissions come in Phase 8.</li>
+  <li>Expenses and true net profit are Phase 6 (dashboard Profit currently shows gross profit from sales).</li>
+</ul>
+
+<p class="muted" style="margin-top:24px; text-align:center; border-top:1px solid #e5e7eb; padding-top:8px;">
+Mera Hisaab &mdash; Apni Dukaan, Apna Hisaab.</p>
+
+</body>
+</html>
