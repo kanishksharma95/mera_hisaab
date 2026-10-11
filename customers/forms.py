@@ -7,6 +7,14 @@ from .models import Customer
 
 
 class CustomerForm(BootstrapFormMixin, forms.ModelForm):
+    opening_balance = forms.DecimalField(
+        label="Purana Pichla Udhaar / Opening Balance (₹)",
+        required=False,
+        min_value=0,
+        initial=0,
+        help_text="App shuru karne se pehle ka baki udhaar (agar koi hai toh yahan likhein)",
+    )
+
     class Meta:
         model = Customer
         fields = ("name", "phone", "email", "address", "credit_limit", "notes")
@@ -20,6 +28,9 @@ class CustomerForm(BootstrapFormMixin, forms.ModelForm):
         for name, field in self.fields.items():
             if name != "name":
                 field.required = False
+        # Hide opening_balance on edit view
+        if self.instance and self.instance.pk:
+            self.fields.pop("opening_balance", None)
 
 
 class PaymentForm(BootstrapFormMixin, forms.Form):

@@ -72,6 +72,17 @@ class CustomerViewTests(TestCase):
         c = Customer.objects.get(name="Rahul")
         self.assertEqual(c.business, self.business)
 
+    def test_create_customer_with_opening_balance(self):
+        self.client.post(
+            reverse("customers:add"),
+            {"name": "Suresh", "credit_limit": "0", "opening_balance": "2500"},
+        )
+        c = Customer.objects.get(name="Suresh")
+        self.assertEqual(c.current_balance, Decimal("2500.00"))
+        entry = c.ledger_entries.first()
+        self.assertEqual(entry.amount, Decimal("2500.00"))
+        self.assertEqual(entry.description, "Pichla Udhaar / Opening Balance")
+
     def test_record_payment_via_view(self):
         c = Customer.objects.create(business=self.business, name="Simran")
         record_charge(customer=c, amount=Decimal("4800"))

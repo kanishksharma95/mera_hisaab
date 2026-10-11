@@ -21,6 +21,15 @@
       <div class="col-md-7">{% include "components/field.html" with field=form.email %}</div>
       <div class="col-md-5">{% include "components/field.html" with field=form.credit_limit %}</div>
     </div>
+    {% if form.opening_balance %}
+    <div class="p-3 mb-3 bg-light border rounded">
+      <div class="d-flex align-items-center gap-2 mb-2 text-primary fw-semibold">
+        <i class="bi bi-clock-history"></i> {% trans "Pichla Hisaab / Old Udhaar (Optional)" %}
+      </div>
+      {% include "components/field.html" with field=form.opening_balance %}
+      <small class="text-muted d-block">{% trans "Agar is customer ka purani diary/khata mein pehle ka udhaar baaki hai, toh direct yahan daalein. Yeh automatically uske khata mein add ho jayega." %}</small>
+    </div>
+    {% endif %}
     {% include "components/field.html" with field=form.address %}
     {% include "components/field.html" with field=form.notes %}
     <button type="submit" class="btn btn-primary">{% if is_edit %}{% trans "Save changes" %}{% else %}{% trans "Add customer" %}{% endif %}</button>

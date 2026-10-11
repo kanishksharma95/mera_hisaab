@@ -51,6 +51,16 @@ def customer_create(request):
             customer = form.save(commit=False)
             customer.business = request.business
             customer.save()
+
+            opening_bal = form.cleaned_data.get("opening_balance")
+            if opening_bal and opening_bal > 0:
+                record_charge(
+                    customer=customer,
+                    amount=opening_bal,
+                    description="Pichla Udhaar / Opening Balance",
+                    user=request.user,
+                )
+
             messages.success(request, f"Customer '{customer.name}' added.")
             return redirect("customers:detail", pk=customer.pk)
     else:
