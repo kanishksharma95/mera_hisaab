@@ -74,6 +74,7 @@ INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
 # ---------------------------------------------------------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -111,10 +112,14 @@ ASGI_APPLICATION = "config.asgi.application"
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-# PostgreSQL is the target database. For local development / CI where a
-# Postgres server may not be available, set USE_SQLITE=1 to fall back to a
-# file-based SQLite database so migrations and tests still run.
-if env("USE_SQLITE"):
+# PostgreSQL is the target database. Supports standard DATABASE_URL (Render, Supabase, etc.)
+# as well as individual POSTGRES_* vars, or USE_SQLITE=1 fallback.
+if env("DATABASE_URL", default=""):
+    DATABASES = {
+        "default": env.db("DATABASE_URL")
+    }
+    DATABASES["default"]["CONN_MAX_AGE"] = env.int("POSTGRES_CONN_MAX_AGE", default=60)
+elif env("USE_SQLITE"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -135,6 +140,7 @@ else:
     }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 
 # ---------------------------------------------------------------------------
 # Authentication

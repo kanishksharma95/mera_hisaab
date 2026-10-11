@@ -16,8 +16,9 @@ ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS")
 # ---------------------------------------------------------------------------
 SECRET_KEY = env("DJANGO_SECRET_KEY")  # raises ImproperlyConfigured if unset
 
-if not DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+if not DATABASES["default"]["ENGINE"].endswith("sqlite3") and not env("DATABASE_URL", default=""):
     DATABASES["default"]["PASSWORD"] = env("POSTGRES_PASSWORD")  # required
+
 
 # If Razorpay is enabled in production, webhook verification must have a secret
 # — otherwise anyone could POST forged 'paid' events.
