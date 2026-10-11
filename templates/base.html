@@ -18,6 +18,14 @@
     })();
   </script>
 
+  <!-- PWA & Mobile Installability -->
+  <link rel="manifest" href="{% static 'manifest.json' %}">
+  <link rel="icon" type="image/svg+xml" href="{% static 'icons/icon.svg' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon.svg' %}">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
   <!-- Self-hosted vendor CSS -->
   <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
   <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
@@ -34,6 +42,14 @@
   <script src="{% static 'vendor/htmx/htmx.min.js' %}"></script>
   <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
   <script src="{% static 'js/app.js' %}"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/static/sw.js').catch(function() {});
+      });
+    }
+  </script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
+

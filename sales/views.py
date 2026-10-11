@@ -57,10 +57,12 @@ def pos_search(request):
             "unit": p.unit,
             "stock": str(p.current_stock),
             "sku": p.sku,
+            "barcode": p.barcode or "",
         }
         for p in products
     ]
     return JsonResponse({"results": data})
+
 
 
 @business_required
