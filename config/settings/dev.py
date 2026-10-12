@@ -19,8 +19,17 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.ngrok.io",
 ]
 
-# Show emails (password reset, notifications) in the console during dev.
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# Email: If credentials are provided in .env, use real SMTP; otherwise log to console.
+if env("EMAIL_HOST_USER", default=""):
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
+    EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+    EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="").replace(" ", "")
+    EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+    DEFAULT_FROM_EMAIL = f"Mera Hisaab <{EMAIL_HOST_USER}>"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Allow developers without a local Postgres to opt into SQLite quickly.
 # (Handled in base.py via USE_SQLITE; nothing extra needed here.)
