@@ -187,3 +187,47 @@ class BillingIsolationTests(TestCase):
         self.assertTrue(nums[0].endswith("000001"))
         self.assertTrue(nums[1].endswith("000002"))
         self.assertTrue(nums[2].endswith("000003"))
+
+
+class EmailInvoiceTests(TestCase):
+    def setUp(self):
+        self.user, self.business = setup_shop(email="owner@myshop.com", name="Sharma Store")
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["active_business_id"] = self.business.id
+        session.save()
+        self.p = Product.objects.create(
+            business=self.business, name="Soap", selling_price=Decimal("40"),
+            purchase_price=Decimal("25"), current_stock=10,
+        )
+        self.sale = create_sale(
+            business=self.business, user=self.user,
+            items=[{"product": self.p, "quantity": 2}],
+            payments=[{"method": method(self.business, "cash"), "amount": Decimal("80")}],
+        )
+
+    def test_send_invoice_email_tareeqa_a(self):
+        from django.core import mail
+        from django.urls import reverse
+
+        resp = self.client.post(
+            reverse("sales:invoice_email", args=[self.sale.pk]),
+            {"email": "customer@example.com"},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(len(mail.outbox), 1)
+        sent = mail.outbox[0]
+        self.assertEqual(sent.to, ["customer@example.com"])
+        self.assertIn("Sharma Store (via Mera Hisaab)", sent.from_email)
+        self.assertEqual(sent.reply_to, ["owner@myshop.com"])
+        self.assertIn(self.sale.invoice_number, sent.subject)
+
+    def test_send_invoice_email_missing_email_shows_error(self):
+        from django.urls import reverse
+        resp = self.client.post(
+            reverse("sales:invoice_email", args=[self.sale.pk]),
+            {"email": ""},
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "valid customer email")

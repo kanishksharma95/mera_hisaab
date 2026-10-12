@@ -17,6 +17,7 @@
       <a href="{% url 'sales:thermal' sale.pk %}" target="_blank" class="btn btn-outline-dark"><i class="bi bi-receipt"></i> {% trans "POS Slip" %}</a>
       <a href="{% url 'sales:invoice_pdf' sale.pk %}" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
       <a href="{{ whatsapp_url }}" target="_blank" rel="noopener" class="btn btn-success"><i class="bi bi-whatsapp"></i> {% trans "Share" %}</a>
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#emailInvoiceModal"><i class="bi bi-envelope"></i> {% trans "Email" %}</button>
     {% endif %}
   </div>
 
@@ -175,5 +176,36 @@
   });
 })();
 </script>
+{% endif %}
+
+{% if not public %}
+<!-- Email Invoice Modal (Tareeqa A) -->
+<div class="modal fade" id="emailInvoiceModal" tabindex="-1" aria-labelledby="emailInvoiceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{% url 'sales:invoice_email' sale.pk %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="emailInvoiceModalLabel"><i class="bi bi-envelope-at text-primary"></i> {% trans "Send Invoice via Email" %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small mb-3">
+            {% trans "Email will be delivered with your shop branding" %} (<strong>{{ business.name }}</strong>) {% trans "and replies will arrive directly at your email." %}
+          </p>
+          <div class="mb-3">
+            <label for="customerEmailInput" class="form-label fw-semibold">{% trans "Customer Email Address" %}</label>
+            <input type="email" class="form-control" id="customerEmailInput" name="email" 
+                   value="{{ sale.customer.email|default:'' }}" placeholder="customer@example.com" required autofocus>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> {% trans "Send Email" %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endif %}
 {% endblock %}

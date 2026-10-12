@@ -183,6 +183,50 @@ def invoice_thermal(request, pk):
     })
 
 
+@business_required
+@require_POST
+def invoice_email(request, pk):
+    """Send an invoice email to the customer with shop branding & reply-to (Tareeqa A)."""
+    sale = _sale_with_items(request.business, pk)
+    to_email = request.POST.get("email", "").strip()
+    if not to_email and sale.customer:
+        to_email = sale.customer.email.strip()
+
+    if not to_email:
+        messages.error(request, "Please enter a valid customer email address.")
+        return redirect("sales:invoice", pk=sale.pk)
+
+    from core.emails import send_tenant_branded_email
+
+    public_url = request.build_absolute_uri(
+        reverse("public_invoice", args=[sale.public_token])
+    )
+
+    context = {
+        "sale": sale,
+        "items": sale.items.all(),
+        "business": sale.business,
+        "sym": sale.business.currency_symbol,
+        "customer_name": sale.customer.name if sale.customer else "",
+        "customer_phone": sale.customer.phone if sale.customer else "",
+        "public_invoice_url": public_url,
+    }
+
+    try:
+        send_tenant_branded_email(
+            business=sale.business,
+            subject=f"Invoice #{sale.invoice_number} from {sale.business.name}",
+            recipient_list=[to_email],
+            template_name="emails/invoice_email.html",
+            context=context,
+        )
+        messages.success(request, f"Invoice #{sale.invoice_number} successfully sent to {to_email}!")
+    except Exception as exc:
+        messages.error(request, f"Could not send email: {exc}")
+
+    return redirect("sales:invoice", pk=sale.pk)
+
+
 
 def public_invoice(request, token):
     """Read-only invoice page reachable by anyone with the link (WhatsApp)."""

@@ -12,6 +12,7 @@ urlpatterns = [
     path("<int:pk>/", views.invoice, name="invoice"),
     path("<int:pk>/pdf/", views.invoice_pdf, name="invoice_pdf"),
     path("<int:pk>/thermal/", views.invoice_thermal, name="thermal"),
+    path("<int:pk>/email/", views.invoice_email, name="invoice_email"),
     path("export/csv/", views.sale_export_csv, name="export_csv"),
 ]
 

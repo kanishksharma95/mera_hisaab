@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice {{ sale.invoice_number }}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
+    .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+    .header { background: #0f172a; color: #ffffff; padding: 24px; }
+    .header h2 { margin: 0 0 4px 0; font-size: 22px; color: #ffffff; }
+    .header p { margin: 0; color: #94a3b8; font-size: 13px; }
+    .body { padding: 24px; }
+    .meta-box { background: #f1f5f9; border-radius: 8px; padding: 16px; margin-bottom: 20px; display: table; width: 100%; box-sizing: border-box; }
+    .meta-col { display: table-cell; width: 50%; vertical-align: top; }
+    .label { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 600; margin-bottom: 2px; }
+    .val { font-size: 15px; font-weight: 600; color: #0f172a; }
+    .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .table th { text-align: left; padding: 10px 8px; font-size: 12px; color: #64748b; border-bottom: 2px solid #e2e8f0; text-transform: uppercase; }
+    .table td { padding: 12px 8px; font-size: 14px; border-bottom: 1px solid #f1f5f9; }
+    .total-box { margin-top: 16px; padding-top: 12px; border-top: 2px solid #e2e8f0; }
+    .total-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; color: #475569; }
+    .grand-total { font-size: 18px; font-weight: 700; color: #0f172a; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1; }
+    .btn-container { text-align: center; margin: 28px 0 12px 0; }
+    .btn { display: inline-block; background: #2563eb; color: #ffffff !important; padding: 12px 28px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 8px; }
+    .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+    .badge-paid { color: #16a34a; font-weight: 600; }
+    .badge-unpaid { color: #dc2626; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h2>{{ business.name }}</h2>
+      <p>{% if business.phone %}Phone: {{ business.phone }} &bull; {% endif %}{% if business.city %}{{ business.city }}{% endif %}</p>
+    </div>
+
+    <div class="body">
+      <div class="meta-box">
+        <div class="meta-col">
+          <div class="label">Invoice To:</div>
+          <div class="val">{{ customer_name|default:"Valued Customer" }}</div>
+          {% if customer_phone %}<div style="font-size:12px; color:#64748b;">{{ customer_phone }}</div>{% endif %}
+        </div>
+        <div class="meta-col" style="text-align: right;">
+          <div class="label">Invoice No:</div>
+          <div class="val">{{ sale.invoice_number }}</div>
+          <div style="font-size:12px; color:#64748b;">{{ sale.created_at|date:"d M Y, H:i" }}</div>
+        </div>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th style="text-align: center;">Qty</th>
+            <th style="text-align: right;">Price</th>
+            <th style="text-align: right;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td>
+              <strong>{{ item.product_name }}</strong>
+            </td>
+            <td style="text-align: center;">{{ item.quantity }}</td>
+            <td style="text-align: right;">{{ sym }}{{ item.unit_price }}</td>
+            <td style="text-align: right;">{{ sym }}{{ item.line_total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="total-box">
+        <table style="width: 100%; font-size: 14px;">
+          <tr>
+            <td style="color:#64748b; padding: 4px 0;">Subtotal:</td>
+            <td style="text-align: right; font-weight: 500;">{{ sym }}{{ sale.subtotal }}</td>
+          </tr>
+          {% if sale.order_discount > 0 %}
+          <tr>
+            <td style="color:#16a34a; padding: 4px 0;">Discount:</td>
+            <td style="text-align: right; color:#16a34a; font-weight: 500;">-{{ sym }}{{ sale.order_discount }}</td>
+          </tr>
+          {% endif %}
+          {% if sale.tax_total > 0 %}
+          <tr>
+            <td style="color:#64748b; padding: 4px 0;">Tax:</td>
+            <td style="text-align: right; font-weight: 500;">+{{ sym }}{{ sale.tax_total }}</td>
+          </tr>
+          {% endif %}
+          <tr style="border-top: 1px dashed #cbd5e1; font-weight: 700; font-size: 16px;">
+            <td style="padding: 8px 0; color:#0f172a;">Grand Total:</td>
+            <td style="text-align: right; color:#0f172a; padding: 8px 0;">{{ sym }}{{ sale.total }}</td>
+          </tr>
+          {% if sale.due_amount > 0 %}
+          <tr style="color: #dc2626; font-weight: 600;">
+            <td style="padding: 4px 0;">Pending Udhaar:</td>
+            <td style="text-align: right; padding: 4px 0;">{{ sym }}{{ sale.due_amount }}</td>
+          </tr>
+          {% else %}
+          <tr style="color: #16a34a; font-weight: 600;">
+            <td style="padding: 4px 0;">Payment Status:</td>
+            <td style="text-align: right; padding: 4px 0;">PAID</td>
+          </tr>
+          {% endif %}
+        </table>
+      </div>
+
+      {% if public_invoice_url %}
+      <div class="btn-container">
+        <a href="{{ public_invoice_url }}" class="btn">View & Download Digital Invoice</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="footer">
+      <p style="margin: 0 0 4px 0;">Thank you for shopping at <strong>{{ business.name }}</strong>!</p>
+      <p style="margin: 0; font-size: 11px;">Powered by Mera Hisaab &bull; If you have any queries, reply directly to this email.</p>
+    </div>
+  </div>
+</body>
+</html>
