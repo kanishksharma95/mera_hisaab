@@ -215,3 +215,44 @@ def customer_export_csv(request):
         ])
     return response
 
+
+@business_required
+def send_email_reminder(request, pk):
+    """Send an Udhaar payment reminder via email to the customer (Tareeqa A)."""
+    customer = get_object_or_404(Customer, pk=pk, business=request.business)
+    to_email = request.POST.get("email", "").strip() or customer.email.strip()
+
+    if not to_email:
+        messages.error(request, "Please enter a valid customer email address.")
+        return redirect("customers:detail", pk=customer.pk)
+
+    if customer.current_balance <= 0:
+        messages.info(request, f"{customer.name} has no pending udhaar balance.")
+        return redirect("customers:detail", pk=customer.pk)
+
+    from django.utils import timezone
+    from core.emails import send_tenant_branded_email
+
+    sym = request.business.currency_symbol or "₹"
+    context = {
+        "customer": customer,
+        "business": request.business,
+        "sym": sym,
+        "today": timezone.localdate(),
+    }
+
+    try:
+        send_tenant_branded_email(
+            business=request.business,
+            subject=f"Payment Reminder: Pending balance {sym}{customer.current_balance} - {request.business.name}",
+            recipient_list=[to_email],
+            template_name="emails/udhaar_reminder_email.html",
+            context=context,
+        )
+        messages.success(request, f"Payment reminder sent to {to_email}!")
+    except Exception as exc:
+        messages.error(request, f"Could not send email reminder: {exc}")
+
+    return redirect("customers:detail", pk=customer.pk)
+
+

@@ -136,3 +136,40 @@ class CustomerTenantIsolationTests(TestCase):
         self.assertEqual(resp.status_code, 404)
         self.cust_b.refresh_from_db()
         self.assertEqual(self.cust_b.current_balance, Decimal("0.00"))
+
+
+class EmailReminderTests(TestCase):
+    def setUp(self):
+        self.user, self.business = make_user_with_business("shop@sharma.com", "Sharma Store")
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["active_business_id"] = self.business.id
+        session.save()
+        self.customer = Customer.objects.create(
+            business=self.business, name="Ramesh", email="ramesh@gmail.com",
+        )
+        record_charge(customer=self.customer, amount=Decimal("2500"))
+
+    def test_send_email_reminder_success(self):
+        from django.core import mail
+        resp = self.client.post(
+            reverse("customers:email_reminder", args=[self.customer.pk]),
+            {"email": "ramesh@gmail.com"},
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(len(mail.outbox), 1)
+        sent = mail.outbox[0]
+        self.assertEqual(sent.to, ["ramesh@gmail.com"])
+        self.assertIn("Sharma Store (via Mera Hisaab)", sent.from_email)
+        self.assertEqual(sent.reply_to, ["shop@sharma.com"])
+        self.assertIn("2500", sent.subject)
+
+    def test_send_email_reminder_no_balance(self):
+        c_clear = Customer.objects.create(business=self.business, name="Clean Customer", email="c@test.com")
+        resp = self.client.post(
+            reverse("customers:email_reminder", args=[c_clear.pk]),
+            {"email": "c@test.com"},
+            follow=True,
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "no pending udhaar")

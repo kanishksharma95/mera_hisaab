@@ -13,6 +13,7 @@
     <a href="{% url 'customers:edit' customer.pk %}" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> {% trans "Edit" %}</a>
     {% if customer.current_balance > 0 %}
       <a href="{{ whatsapp_reminder_url }}" target="_blank" rel="noopener" class="btn btn-outline-success"><i class="bi bi-whatsapp"></i> {% trans "WhatsApp Reminder" %}</a>
+      <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#emailReminderModal"><i class="bi bi-envelope"></i> {% trans "Email Reminder" %}</button>
     {% endif %}
     <a href="{% url 'customers:add_udhaar' customer.pk %}" class="btn btn-outline-warning"><i class="bi bi-plus-circle"></i> {% trans "Add udhaar" %}</a>
     <a href="{% url 'customers:payment' customer.pk %}" class="btn btn-success"><i class="bi bi-cash-coin"></i> {% trans "Record payment" %}</a>
@@ -70,5 +71,37 @@
   {{ customer.notes|linebreaksbr }}
 </div>
 {% endif %}
+
+{% if customer.current_balance > 0 %}
+<!-- Email Reminder Modal -->
+<div class="modal fade" id="emailReminderModal" tabindex="-1" aria-labelledby="emailReminderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{% url 'customers:email_reminder' customer.pk %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="emailReminderModalLabel"><i class="bi bi-envelope-at text-primary"></i> {% trans "Send Udhaar Reminder via Email" %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small mb-3">
+            {% trans "A polite payment reminder with pending balance" %} (<strong>{{ sym }}{{ customer.current_balance }}</strong>) {% trans "will be sent with your shop branding" %}.
+          </p>
+          <div class="mb-3">
+            <label for="reminderEmailInput" class="form-label fw-semibold">{% trans "Customer Email Address" %}</label>
+            <input type="email" class="form-control" id="reminderEmailInput" name="email" 
+                   value="{{ customer.email|default:'' }}" placeholder="customer@example.com" required autofocus>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+          <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> {% trans "Send Reminder" %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% endwith %}
 {% endblock %}

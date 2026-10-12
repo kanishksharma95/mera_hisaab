@@ -11,6 +11,7 @@ urlpatterns = [
     path("<int:pk>/edit/", views.customer_edit, name="edit"),
     path("<int:pk>/payment/", views.record_payment_view, name="payment"),
     path("<int:pk>/udhaar/", views.add_udhaar_view, name="add_udhaar"),
+    path("<int:pk>/email-reminder/", views.send_email_reminder, name="email_reminder"),
     path("export/csv/", views.customer_export_csv, name="export_csv"),
 ]
 

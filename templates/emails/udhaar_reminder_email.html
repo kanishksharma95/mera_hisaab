@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Reminder - {{ business.name }}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
+    .card { max-width: 540px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+    .header { background: #0f766e; color: #ffffff; padding: 24px; text-align: center; }
+    .header h2 { margin: 0 0 4px 0; font-size: 22px; color: #ffffff; }
+    .header p { margin: 0; color: #ccfbf1; font-size: 13px; }
+    .body { padding: 28px 24px; }
+    .amount-box { background: #fef2f2; border: 1px solid #fee2e2; border-radius: 10px; padding: 18px; text-align: center; margin: 20px 0; }
+    .amount-label { font-size: 12px; text-transform: uppercase; color: #991b1b; font-weight: 700; letter-spacing: 0.05em; }
+    .amount-val { font-size: 32px; font-weight: 800; color: #dc2626; margin: 6px 0; }
+    .footer { background: #f8fafc; padding: 16px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h2>{{ business.name }}</h2>
+      <p>{% if business.phone %}📞 {{ business.phone }} &bull; {% endif %}{% if business.city %}{{ business.city }}{% endif %}</p>
+    </div>
+
+    <div class="body">
+      <p style="font-size: 16px; margin-top: 0;">Namaste <strong>{{ customer.name }}</strong>,</p>
+      
+      <p style="color: #475569; line-height: 1.6;">
+        This is a gentle payment reminder from <strong>{{ business.name }}</strong> regarding your pending account balance.
+      </p>
+
+      <div class="amount-box">
+        <div class="amount-label">Pending Udhaar Balance</div>
+        <div class="amount-val">{{ sym }}{{ customer.current_balance }}</div>
+        <div style="font-size: 12px; color: #b91c1c;">As of {{ today|date:"d M Y" }}</div>
+      </div>
+
+      <p style="color: #475569; line-height: 1.6;">
+        Kindly clear the pending balance at your earliest convenience. You can pay via Cash or UPI at our shop.
+      </p>
+
+      {% if business.phone %}
+      <p style="color: #64748b; font-size: 13px;">
+        For any questions or clarification regarding your ledger, please call us at <strong>{{ business.phone }}</strong> or simply reply directly to this email.
+      </p>
+      {% endif %}
+    </div>
+
+    <div class="footer">
+      <p style="margin: 0 0 4px 0;">Thank you for your continued trust and business!</p>
+      <p style="margin: 0; font-size: 11px;">Powered by Mera Hisaab &bull; Apni Dukaan, Apna Hisaab</p>
+    </div>
+  </div>
+</body>
+</html>
