@@ -124,6 +124,41 @@ class ProductForm(BootstrapFormMixin, forms.ModelForm):
                 raise forms.ValidationError("A product with this SKU already exists.")
         return sku
 
+    def clean_unit(self):
+        """A unit of measure must be a real unit (pcs, kg, ...), not a number."""
+        unit = (self.cleaned_data.get("unit") or "").strip()
+        if not unit:
+            return "pcs"
+        if not any(ch.isalpha() for ch in unit):
+            raise forms.ValidationError(
+                "Enter a valid unit like pcs, kg, litre — not just a number."
+            )
+        return unit
+
+    def clean_purchase_price(self):
+        price = self.cleaned_data.get("purchase_price")
+        if price is not None and price < 0:
+            raise forms.ValidationError("Purchase price cannot be negative.")
+        return price
+
+    def clean_selling_price(self):
+        price = self.cleaned_data.get("selling_price")
+        if price is not None and price < 0:
+            raise forms.ValidationError("Selling price cannot be negative.")
+        return price
+
+    def clean_tax_percent(self):
+        tax = self.cleaned_data.get("tax_percent")
+        if tax is not None and (tax < 0 or tax > 100):
+            raise forms.ValidationError("Tax % must be between 0 and 100.")
+        return tax
+
+    def clean_min_stock_level(self):
+        level = self.cleaned_data.get("min_stock_level")
+        if level is not None and level < 0:
+            raise forms.ValidationError("Minimum stock level cannot be negative.")
+        return level
+
     def attribute_bound_fields(self):
         """Yield (BoundField, BusinessTypeField) for template rendering."""
         for key, f in getattr(self, "attribute_fields", []):

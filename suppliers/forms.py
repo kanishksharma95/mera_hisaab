@@ -2,6 +2,7 @@
 from django import forms
 
 from accounts.forms import BootstrapFormMixin
+from core.validators import validate_phone
 
 from .models import Supplier
 
@@ -20,6 +21,11 @@ class SupplierForm(BootstrapFormMixin, forms.ModelForm):
         for name, field in self.fields.items():
             if name != "name":
                 field.required = False
+
+    def clean_phone(self):
+        phone = (self.cleaned_data.get("phone") or "").strip()
+        validate_phone(phone)
+        return phone
 
 
 class SupplierPaymentForm(BootstrapFormMixin, forms.Form):

@@ -3,6 +3,7 @@ from django import forms
 
 from accounts.forms import BootstrapFormMixin
 from accounts.models import User
+from core.validators import validate_phone
 
 from .models import Business, BusinessMembership, BusinessType
 
@@ -47,6 +48,17 @@ class BusinessForm(BootstrapFormMixin, forms.ModelForm):
             if name != "name":
                 field.required = False
 
+    def clean_phone(self):
+        phone = (self.cleaned_data.get("phone") or "").strip()
+        validate_phone(phone)
+        return phone
+
+    def clean_default_tax_percent(self):
+        tax = self.cleaned_data.get("default_tax_percent")
+        if tax is not None and (tax < 0 or tax > 100):
+            raise forms.ValidationError("Default tax % must be between 0 and 100.")
+        return tax
+
 
 class EmployeeCreateForm(BootstrapFormMixin, forms.Form):
     """Form to add or invite a team member/employee to the business."""
@@ -75,6 +87,11 @@ class EmployeeCreateForm(BootstrapFormMixin, forms.Form):
             if existing_member:
                 raise forms.ValidationError("This user is already a member of this business.")
         return email
+
+    def clean_phone(self):
+        phone = (self.cleaned_data.get("phone") or "").strip()
+        validate_phone(phone)
+        return phone
 
     def save(self):
         email = self.cleaned_data["email"]

@@ -2,6 +2,7 @@
 from django import forms
 
 from accounts.forms import BootstrapFormMixin
+from core.validators import validate_phone
 
 from .models import Customer
 
@@ -31,6 +32,17 @@ class CustomerForm(BootstrapFormMixin, forms.ModelForm):
         # Hide opening_balance on edit view
         if self.instance and self.instance.pk:
             self.fields.pop("opening_balance", None)
+
+    def clean_phone(self):
+        phone = (self.cleaned_data.get("phone") or "").strip()
+        validate_phone(phone)
+        return phone
+
+    def clean_credit_limit(self):
+        limit = self.cleaned_data.get("credit_limit")
+        if limit is not None and limit < 0:
+            raise forms.ValidationError("Credit limit cannot be negative.")
+        return limit
 
 
 class PaymentForm(BootstrapFormMixin, forms.Form):

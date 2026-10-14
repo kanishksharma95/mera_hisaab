@@ -7,6 +7,8 @@ from django.contrib.auth.forms import (
 )
 from django.utils.translation import gettext_lazy as _
 
+from core.validators import validate_phone
+
 User = get_user_model()
 
 
@@ -42,6 +44,11 @@ class RegistrationForm(BootstrapFormMixin, UserCreationForm):
             raise forms.ValidationError(_("An account with this email already exists."))
         return email
 
+    def clean_phone(self):
+        phone = (self.cleaned_data.get("phone") or "").strip()
+        validate_phone(phone)
+        return phone
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.full_name = self.cleaned_data["full_name"]
@@ -71,3 +78,8 @@ class ProfileForm(BootstrapFormMixin, forms.ModelForm):
         if qs.exists():
             raise forms.ValidationError(_("This email is already in use."))
         return email
+
+    def clean_phone(self):
+        phone = (self.cleaned_data.get("phone") or "").strip()
+        validate_phone(phone)
+        return phone

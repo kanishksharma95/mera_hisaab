@@ -60,7 +60,15 @@ def create_purchase(*, business, user, items, supplier=None, order_discount=0,
         if unit_cost < 0:
             raise ValidationError("Cost cannot be negative.")
         discount = Decimal(row.get("discount", 0) or 0)
+        if discount < 0:
+            raise ValidationError(f"Discount for {product.name} cannot be negative.")
+        if discount > unit_cost * quantity:
+            raise ValidationError(
+                f"Discount for {product.name} cannot exceed the line amount."
+            )
         rate = Decimal(row.get("tax_percent", product.tax_percent) or 0)
+        if rate < 0 or rate > 100:
+            raise ValidationError("Tax % must be between 0 and 100.")
 
         net = unit_cost * quantity - discount
         tax = net * rate / Decimal("100")

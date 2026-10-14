@@ -90,6 +90,12 @@ def create_sale(*, business, user, items, customer=None, order_discount=0,
         if unit_price < 0:
             raise ValidationError("Price cannot be negative.")
         discount = Decimal(row.get("discount", 0) or 0)
+        if discount < 0:
+            raise ValidationError(f"Discount for {product.name} cannot be negative.")
+        if discount > unit_price * quantity:
+            raise ValidationError(
+                f"Discount for {product.name} cannot exceed the line amount."
+            )
 
         net, tax, line_total = _compute_line(
             unit_price=unit_price, quantity=quantity, discount=discount,

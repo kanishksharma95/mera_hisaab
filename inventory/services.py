@@ -8,6 +8,7 @@ concurrency.
 """
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from products.models import Product
@@ -25,6 +26,13 @@ def record_transaction(*, product, kind, quantity, note="", reference="", user=N
     with transaction.atomic():
         locked = Product.objects.select_for_update().get(pk=product.pk)
         new_balance = (locked.current_stock or Decimal("0")) + quantity
+        # A sale can't take more stock than is on hand. Manual adjustments and
+        # corrections are still free to set any value.
+        if kind == InventoryTransaction.Kind.SALE and new_balance < 0:
+            raise ValidationError(
+                f"Not enough stock for {locked.name}: "
+                f"{locked.current_stock or Decimal('0')} {locked.unit} available."
+            )
         txn = InventoryTransaction.objects.create(
             business=locked.business,
             product=locked,
