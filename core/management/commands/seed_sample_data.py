@@ -88,6 +88,45 @@ class Command(BaseCommand):
                 user=kanishk_user, business=business,
                 defaults={"role": BusinessMembership.Role.OWNER},
             )
+            for other_b in Business.objects.filter(name__icontains="Kiryana"):
+                BusinessMembership.objects.get_or_create(
+                    user=kanishk_user, business=other_b,
+                    defaults={"role": BusinessMembership.Role.OWNER},
+                )
+                BusinessMembership.objects.get_or_create(
+                    user=demo_user, business=other_b,
+                    defaults={"role": BusinessMembership.Role.OWNER},
+                )
+                # Seed suppliers and purchases for Kiryana store as well
+                supp_k, _ = Supplier.objects.get_or_create(
+                    business=other_b, name="Balaji Wholesale Agency",
+                    defaults={"phone": "9829011223", "address": "Mandi Yard"}
+                )
+                ensure_default_methods(other_b)
+                ensure_default_categories(other_b)
+                cat_k, _ = ProductCategory.objects.get_or_create(business=other_b, name="General Grocery")
+                p1_k, _ = Product.objects.get_or_create(
+                    business=other_b, name="Madhur Sugar 1kg",
+                    defaults={"category": cat_k, "purchase_price": Decimal("42.00"), "selling_price": Decimal("48.00"), "current_stock": Decimal("100"), "min_stock_level": Decimal("20")}
+                )
+                p2_k, _ = Product.objects.get_or_create(
+                    business=other_b, name="Basmati Rice 5kg",
+                    defaults={"category": cat_k, "purchase_price": Decimal("420.00"), "selling_price": Decimal("490.00"), "current_stock": Decimal("50"), "min_stock_level": Decimal("10")}
+                )
+                from purchases.models import Purchase as KP
+                from purchases.services import create_purchase as k_create_purchase
+                if KP.objects.for_business(other_b).count() == 0:
+                    pm_cash_k = PaymentMethod.objects.for_business(other_b).filter(code="cash").first()
+                    k_create_purchase(
+                        business=other_b, user=kanishk_user, supplier=supp_k,
+                        supplier_invoice="BILL-KIRYANA-101", notes="Initial stock delivery (Partial Udhaar)",
+                        items=[
+                            {"product": p1_k, "quantity": Decimal("50.000"), "unit_cost": Decimal("42.00")},
+                            {"product": p2_k, "quantity": Decimal("20.000"), "unit_cost": Decimal("420.00")},
+                        ],
+                        payments=[{"method": pm_cash_k, "amount": Decimal("5000.00")}] if pm_cash_k else [],
+                    )
+
 
             # 5. Methods & Categories
             ensure_default_methods(business)
