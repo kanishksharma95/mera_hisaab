@@ -264,4 +264,37 @@ class Command(BaseCommand):
                     notes="Udhaar khata mein likha",
                 )
 
+            # 12. Purchases (Stock-In from Wholesalers)
+            from purchases.models import Purchase
+            from purchases.services import create_purchase
+            if Purchase.objects.for_business(business).count() < 2:
+                # Purchase 1: Balaji / Mittal Wholesale (Partial Credit)
+                p_sugar = created_prods.get("Madhur Pure Sugar 1kg", p_atta)
+                create_purchase(
+                    business=business,
+                    user=demo_user,
+                    supplier=supp_mittal,
+                    supplier_invoice="INV-MITTAL-782",
+                    notes="Sugar and Atta restock shipment (Partially Paid)",
+                    items=[
+                        {"product": p_sugar, "quantity": Decimal("25.000"), "unit_cost": Decimal("42.00")},
+                        {"product": p_atta, "quantity": Decimal("10.000"), "unit_cost": Decimal("410.00")},
+                    ],
+                    payments=[{"method": cash_m, "amount": Decimal("3150.00")}],
+                )
+
+                # Purchase 2: Dairy Supply via UPI (Full Paid)
+                create_purchase(
+                    business=business,
+                    user=demo_user,
+                    supplier=supp_dairy,
+                    supplier_invoice="BILL-AMUL-409",
+                    notes="Milk and Ghee restock via UPI (PAID)",
+                    items=[
+                        {"product": p_butter, "quantity": Decimal("20.000"), "unit_cost": Decimal("255.00")},
+                    ],
+                    payments=[{"method": upi_m, "amount": Decimal("5100.00")}],
+                )
+
         self.stdout.write(self.style.SUCCESS("Successfully seeded sample data for Sharma Supermarket!"))
+
