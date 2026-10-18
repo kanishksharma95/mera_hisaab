@@ -88,43 +88,84 @@ class Command(BaseCommand):
                 user=kanishk_user, business=business,
                 defaults={"role": BusinessMembership.Role.OWNER},
             )
-            for other_b in Business.objects.filter(name__icontains="Kiryana"):
-                BusinessMembership.objects.get_or_create(
-                    user=kanishk_user, business=other_b,
-                    defaults={"role": BusinessMembership.Role.OWNER},
-                )
-                BusinessMembership.objects.get_or_create(
-                    user=demo_user, business=other_b,
-                    defaults={"role": BusinessMembership.Role.OWNER},
-                )
-                # Seed suppliers and purchases for Kiryana store as well
-                supp_k, _ = Supplier.objects.get_or_create(
-                    business=other_b, name="Balaji Wholesale Agency",
-                    defaults={"phone": "9829011223", "address": "Mandi Yard"}
-                )
+            # Seed suppliers and purchases for any Kiryana or related store in the system
+            for other_b in Business.objects.all():
+                # Ensure default payment methods & categories exist
                 ensure_default_methods(other_b)
                 ensure_default_categories(other_b)
-                cat_k, _ = ProductCategory.objects.get_or_create(business=other_b, name="General Grocery")
-                p1_k, _ = Product.objects.get_or_create(
+                pm_c = PaymentMethod.objects.for_business(other_b).filter(code="cash").first()
+                pm_u = PaymentMethod.objects.for_business(other_b).filter(code="upi").first()
+
+                # Add 3 diverse Wholesale Suppliers
+                s_balaji, _ = Supplier.objects.get_or_create(
+                    business=other_b, name="Balaji Wholesale Agency",
+                    defaults={"phone": "9829011223", "address": "Shop 12, Krishi Mandi", "gst_number": "08AAAAA1234B1Z2"}
+                )
+                s_dairy, _ = Supplier.objects.get_or_create(
+                    business=other_b, name="Amul & Rajasthan Dairy Depot",
+                    defaults={"phone": "9829044556", "address": "Dairy Road, Sanganer"}
+                )
+                s_spices, _ = Supplier.objects.get_or_create(
+                    business=other_b, name="Kisan Masala & Dryfruits Traders",
+                    defaults={"phone": "9829077889", "address": "Godown 4, Grain Market"}
+                )
+
+                # Categories & Products
+                cat_gen, _ = ProductCategory.objects.get_or_create(business=other_b, name="General Grocery")
+                cat_bev, _ = ProductCategory.objects.get_or_create(business=other_b, name="Tea & Beverages")
+
+                p_sug, _ = Product.objects.get_or_create(
                     business=other_b, name="Madhur Sugar 1kg",
-                    defaults={"category": cat_k, "purchase_price": Decimal("42.00"), "selling_price": Decimal("48.00"), "current_stock": Decimal("100"), "min_stock_level": Decimal("20")}
+                    defaults={"category": cat_gen, "purchase_price": Decimal("42.00"), "selling_price": Decimal("48.00"), "current_stock": Decimal("100"), "min_stock_level": Decimal("20"), "unit": "kg"}
                 )
-                p2_k, _ = Product.objects.get_or_create(
+                p_ric, _ = Product.objects.get_or_create(
                     business=other_b, name="Basmati Rice 5kg",
-                    defaults={"category": cat_k, "purchase_price": Decimal("420.00"), "selling_price": Decimal("490.00"), "current_stock": Decimal("50"), "min_stock_level": Decimal("10")}
+                    defaults={"category": cat_gen, "purchase_price": Decimal("420.00"), "selling_price": Decimal("490.00"), "current_stock": Decimal("50"), "min_stock_level": Decimal("10"), "unit": "pack"}
                 )
-                from purchases.models import Purchase as KP
-                from purchases.services import create_purchase as k_create_purchase
-                if KP.objects.for_business(other_b).count() == 0:
-                    pm_cash_k = PaymentMethod.objects.for_business(other_b).filter(code="cash").first()
-                    k_create_purchase(
-                        business=other_b, user=kanishk_user, supplier=supp_k,
-                        supplier_invoice="BILL-KIRYANA-101", notes="Initial stock delivery (Partial Udhaar)",
+                p_tea_k, _ = Product.objects.get_or_create(
+                    business=other_b, name="Tata Tea Gold 250g",
+                    defaults={"category": cat_bev, "purchase_price": Decimal("115.00"), "selling_price": Decimal("140.00"), "current_stock": Decimal("40"), "min_stock_level": Decimal("10"), "unit": "pack"}
+                )
+                p_ghee_k, _ = Product.objects.get_or_create(
+                    business=other_b, name="Amul Pure Ghee 1L",
+                    defaults={"category": cat_gen, "purchase_price": Decimal("560.00"), "selling_price": Decimal("640.00"), "current_stock": Decimal("30"), "min_stock_level": Decimal("5"), "unit": "tin"}
+                )
+
+                # Seed Purchases if less than 3 exist for this business
+                from purchases.models import Purchase as PModel
+                from purchases.services import create_purchase as do_create_purchase
+                if PModel.objects.for_business(other_b).count() < 3:
+                    u_creator = other_b.memberships.first().user if other_b.memberships.exists() else kanishk_user
+                    
+                    # 1. Grain & Sugar restock - Partial Payment (Supplier Udhaar)
+                    do_create_purchase(
+                        business=other_b, user=u_creator, supplier=s_balaji,
+                        supplier_invoice="INV-BALAJI-441", notes="Weekly staple restock (Partial Credit)",
                         items=[
-                            {"product": p1_k, "quantity": Decimal("50.000"), "unit_cost": Decimal("42.00")},
-                            {"product": p2_k, "quantity": Decimal("20.000"), "unit_cost": Decimal("420.00")},
+                            {"product": p_sug, "quantity": Decimal("40.000"), "unit_cost": Decimal("42.00")},
+                            {"product": p_ric, "quantity": Decimal("15.000"), "unit_cost": Decimal("420.00")},
                         ],
-                        payments=[{"method": pm_cash_k, "amount": Decimal("5000.00")}] if pm_cash_k else [],
+                        payments=[{"method": pm_c, "amount": Decimal("4000.00")}] if pm_c else [],
+                    )
+
+                    # 2. Dairy & Ghee batch - Paid in Full via UPI
+                    do_create_purchase(
+                        business=other_b, user=u_creator, supplier=s_dairy,
+                        supplier_invoice="BILL-AMUL-992", notes="Fresh Ghee & Dairy batch (Paid Full via UPI)",
+                        items=[
+                            {"product": p_ghee_k, "quantity": Decimal("15.000"), "unit_cost": Decimal("560.00")},
+                        ],
+                        payments=[{"method": pm_u, "amount": Decimal("8400.00")}] if pm_u else [],
+                    )
+
+                    # 3. Premium Tea & Masala - 100% Credit (Payable later)
+                    do_create_purchase(
+                        business=other_b, user=u_creator, supplier=s_spices,
+                        supplier_invoice="INV-KISAN-310", notes="Tea supply on 15 days credit bill",
+                        items=[
+                            {"product": p_tea_k, "quantity": Decimal("25.000"), "unit_cost": Decimal("115.00")},
+                        ],
+                        payments=[],  # 100% Udhaar
                     )
 
 
