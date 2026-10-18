@@ -104,37 +104,38 @@ class Command(BaseCommand):
             cat_snacks, _ = ProductCategory.objects.get_or_create(business=business, name="Snacks & Beverages")
             cat_cleaning, _ = ProductCategory.objects.get_or_create(business=business, name="Household & Personal Care")
 
-            # 7. Products
-                # Grains & Sugar
-                ("Madhur Pure Sugar 1kg", cat_grains, "8901234567890", "42.00", "48.00", "0", "50", "kg"),
-                ("India Gate Basmati Rice 5kg", cat_grains, "8901234567891", "420.00", "490.00", "0", "20", "pack"),
-                ("Aashirvaad Shudh Chakki Atta 10kg", cat_grains, "8901725181222", "410.00", "460.00", "0", "45", "bag"),
-                ("India Gate Basmati Rice Feast 5kg", cat_grains, "8901507000213", "380.00", "445.00", "0", "30", "bag"),
-                ("Tata Sampann Toor Dal 1kg", cat_grains, "8904043902341", "145.00", "175.00", "0", "50", "kg"),
+            # 7. Products (with realistic min stock levels for low-stock alerts)
+            products_data = [
+                # Grains & Sugar (name, cat, barcode, cost, sell, tax, stock, unit, min_stock)
+                ("Madhur Pure Sugar 1kg", cat_grains, "8901234567890", "42.00", "48.00", "0", "50", "kg", "10"),
+                ("India Gate Basmati Rice 5kg", cat_grains, "8901234567891", "420.00", "490.00", "0", "20", "pack", "5"),
+                ("Aashirvaad Shudh Chakki Atta 10kg", cat_grains, "8901725181222", "410.00", "460.00", "0", "45", "bag", "10"),
+                ("India Gate Basmati Rice Feast 5kg", cat_grains, "8901507000213", "380.00", "445.00", "0", "29", "bag", "30"),
+                ("Tata Sampann Toor Dal 1kg", cat_grains, "8904043902341", "145.00", "175.00", "0", "50", "kg", "10"),
                 # Oils & Ghee
-                ("Fortune Sunlite Refined Sunflower Oil 1L", cat_oils, "8906007280014", "125.00", "148.00", "5", "60", "bottle"),
-                ("Amul Pure Ghee 1L Tin", cat_oils, "8901262010888", "560.00", "640.00", "12", "25", "tin"),
-                ("Tata Salt Vacuum Evaporated 1kg", cat_oils, "8904043901005", "23.50", "28.00", "0", "120", "pkt"),
+                ("Fortune Sunlite Refined Sunflower Oil 1L", cat_oils, "8906007280014", "125.00", "148.00", "5", "60", "bottle", "15"),
+                ("Amul Pure Ghee 1L Tin", cat_oils, "8901262010888", "560.00", "640.00", "12", "25", "tin", "5"),
+                ("Tata Salt Vacuum Evaporated 1kg", cat_oils, "8904043901005", "23.50", "28.00", "0", "120", "pkt", "25"),
                 # Dairy
-                ("Amul Butter 500g", cat_dairy, "8901262010055", "255.00", "285.00", "12", "20", "pack"),
-                ("Amul Taaza Homogenised Toned Milk 1L", cat_dairy, "8901262010123", "64.00", "74.00", "0", "40", "pack"),
+                ("Amul Butter 500g", cat_dairy, "8901262010055", "255.00", "285.00", "12", "19", "pack", "20"),
+                ("Amul Taaza Homogenised Toned Milk 1L", cat_dairy, "8901262010123", "64.00", "74.00", "0", "40", "pack", "15"),
                 # Snacks & Beverages
-                ("Tata Tea Premium 250g", cat_snacks, "8901234567892", "110.00", "135.00", "5", "30", "pack"),
-                ("Nescafe Classic Coffee 50g", cat_snacks, "8901234567899", "100.00", "110.00", "0", "15", "jar"),
-                ("Maggi 2-Minute Masala Noodles 70g", cat_snacks, "8901058852331", "11.50", "14.00", "12", "150", "pack"),
-                ("Parle-G Gold Glucose Biscuits 1kg", cat_snacks, "8901719101014", "110.00", "130.00", "18", "35", "pack"),
-                ("Brooke Bond Red Label Tea 500g", cat_snacks, "8901030012214", "260.00", "315.00", "5", "40", "box"),
-                ("Coca Cola 750ml PET", cat_snacks, "8901764012234", "36.00", "45.00", "28", "48", "bottle"),
-                ("Haldiram's Nagpur Bhujia 400g", cat_snacks, "8904063201452", "98.00", "120.00", "12", "55", "pack"),
+                ("Tata Tea Premium 250g", cat_snacks, "8901234567892", "110.00", "135.00", "5", "30", "pack", "10"),
+                ("Nescafe Classic Coffee 50g", cat_snacks, "8901234567899", "100.00", "110.00", "0", "15", "jar", "5"),
+                ("Maggi 2-Minute Masala Noodles 70g", cat_snacks, "8901058852331", "11.50", "14.00", "12", "150", "pack", "30"),
+                ("Parle-G Gold Glucose Biscuits 1kg", cat_snacks, "8901719101014", "110.00", "130.00", "18", "35", "pack", "10"),
+                ("Brooke Bond Red Label Tea 500g", cat_snacks, "8901030012214", "260.00", "315.00", "5", "40", "box", "10"),
+                ("Coca Cola 750ml PET", cat_snacks, "8901764012234", "36.00", "45.00", "28", "48", "bottle", "12"),
+                ("Haldiram's Nagpur Bhujia 400g", cat_snacks, "8904063201452", "98.00", "120.00", "12", "55", "pack", "15"),
                 # Personal Care & Cleaning
-                ("Dettol Original Bath Soap 125g (Pack of 3)", cat_cleaning, "8901396001223", "125.00", "155.00", "18", "30", "pack"),
-                ("Surf Excel Quick Wash Detergent 1kg", cat_cleaning, "8901030789221", "175.00", "215.00", "18", "40", "kg"),
-                ("Colgate MaxFresh Red Gel 150g", cat_cleaning, "8901314010214", "88.00", "110.00", "18", "60", "tube"),
+                ("Dettol Original Bath Soap 125g (Pack of 3)", cat_cleaning, "8901396001223", "125.00", "155.00", "18", "30", "pack", "10"),
+                ("Surf Excel Quick Wash Detergent 1kg", cat_cleaning, "8901030789221", "175.00", "215.00", "18", "40", "kg", "10"),
+                ("Colgate MaxFresh Red Gel 150g", cat_cleaning, "8901314010214", "88.00", "110.00", "18", "60", "tube", "15"),
             ]
 
             created_prods = {}
-            for name, cat, barcode, cost, sell, tax, stock, unit in products_data:
-                prod, _ = Product.objects.get_or_create(
+            for name, cat, barcode, cost, sell, tax, stock, unit, min_s in products_data:
+                prod, _ = Product.objects.update_or_create(
                     business=business, barcode=barcode,
                     defaults={
                         "name": name,
@@ -143,6 +144,7 @@ class Command(BaseCommand):
                         "selling_price": Decimal(sell),
                         "tax_percent": Decimal(tax),
                         "current_stock": Decimal(stock),
+                        "min_stock_level": Decimal(min_s),
                         "unit": unit,
                     },
                 )
