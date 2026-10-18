@@ -168,6 +168,25 @@ class Command(BaseCommand):
                         payments=[],  # 100% Udhaar
                     )
 
+                # Seed expenses for this business
+                from expenses.models import Expense as EModel
+                from expenses.services import record_expense as do_record_expense
+                if EModel.objects.for_business(other_b).count() < 3:
+                    u_creator = other_b.memberships.first().user if other_b.memberships.exists() else kanishk_user
+                    cats_k = {c.name: c for c in ExpenseCategory.objects.for_business(other_b)}
+                    today_k = timezone.localdate()
+                    if "Rent" in cats_k and pm_u:
+                        do_record_expense(business=other_b, category=cats_k["Rent"], amount=Decimal("12000.00"), method=pm_u, spent_on=today_k - timedelta(days=5), note="Monthly Shop Rent paid via UPI", user=u_creator)
+                    if "Electricity" in cats_k and pm_u:
+                        do_record_expense(business=other_b, category=cats_k["Electricity"], amount=Decimal("2450.00"), method=pm_u, spent_on=today_k - timedelta(days=3), note="Electricity bill (Bijli ka bill)", user=u_creator)
+                    if "Tea & Snacks" in cats_k and pm_c:
+                        do_record_expense(business=other_b, category=cats_k["Tea & Snacks"], amount=Decimal("150.00"), method=pm_c, spent_on=today_k, note="Daily Chai nashta for staff & customer", user=u_creator)
+                    if "Transport" in cats_k and pm_c:
+                        do_record_expense(business=other_b, category=cats_k["Transport"], amount=Decimal("600.00"), method=pm_c, spent_on=today_k - timedelta(days=1), note="Tempo carriage from Mandi", user=u_creator)
+                    if "Packaging" in cats_k and pm_c:
+                        do_record_expense(business=other_b, category=cats_k["Packaging"], amount=Decimal("450.00"), method=pm_c, spent_on=today_k - timedelta(days=2), note="Carry bags and packing tape roll", user=u_creator)
+
+
 
             # 5. Methods & Categories
             ensure_default_methods(business)
