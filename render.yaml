@@ -30,6 +30,39 @@ services:
           type: redis
           name: mera-hisaab-redis
           property: connectionString
+      # Force Postgres in prod (never silently fall back to SQLite).
+      - key: USE_SQLITE
+        value: "0"
+      # --- Email (Gmail SMTP): non-secret config here, secrets below ---
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "1"
+      # --- Secrets: set these values in the Render dashboard (sync: false
+      #     keeps them OUT of git; blueprint only declares that they exist) ---
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      # --- Optional: Cloudflare R2 media storage (leave unset to use local FS) ---
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_ENDPOINT
+        sync: false
+      - key: R2_ACCESS_KEY
+        sync: false
+      - key: R2_SECRET_KEY
+        sync: false
 
   # Free Redis (Key Value) instance — internal connections only.
   - type: redis
