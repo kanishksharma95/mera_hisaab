@@ -241,6 +241,12 @@ if R2_BUCKET:
                 "secret_key": env("R2_SECRET_KEY", default=""),
                 "region_name": "auto",
                 "file_overwrite": False,
+                # R2 does not support S3 object ACLs — sending one makes every
+                # upload fail, so disable ACLs entirely.
+                "default_acl": None,
+                # Serve clean, non-expiring public URLs (requires the bucket's
+                # public access / custom domain to be enabled on Cloudflare).
+                "querystring_auth": False,
                 "custom_domain": env("R2_CUSTOM_DOMAIN", default=None),
             },
         },
