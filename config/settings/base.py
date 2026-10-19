@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
     DJANGO_ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
-    USE_SQLITE=(bool, False),
+    USE_SQLITE=(bool, True),
 )
 
 # Read a .env file if present (never required in production containers).

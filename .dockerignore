@@ -1,0 +1,34 @@
+# Version control
+.git
+.gitignore
+
+# Virtualenvs
+venv/
+.venv/
+env/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local databases
+*.sqlite3
+*.sqlite3-journal
+
+# Secrets / environment
+.env
+.env.*
+
+# User-uploaded & build artifacts
+media/
+staticfiles/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs
+*.log

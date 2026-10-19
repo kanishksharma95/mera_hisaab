@@ -9,6 +9,9 @@ pip install -r requirements.txt
 python manage.py collectstatic --no-input
 python manage.py migrate --no-input
 
-# Seed realistic organization sample data
-python manage.py seed_sample_data
+# Optionally seed realistic organization sample data (set SEED_DEMO_DATA=1 in environment)
+if [ "$SEED_DEMO_DATA" = "1" ] || [ "$SEED_DEMO_DATA" = "true" ]; then
+  echo "Seeding sample data..."
+  python manage.py seed_sample_data
+fi
 
