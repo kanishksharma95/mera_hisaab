@@ -23,6 +23,19 @@ services:
         fromDatabase:
           name: mera-hisaab-db
           property: connectionString
+      # Shared cache for rate-limit + axes counters across gunicorn workers.
+      # If this service is removed, the app falls back to in-memory cache.
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: mera-hisaab-redis
+          property: connectionString
+
+  # Free Redis (Key Value) instance — internal connections only.
+  - type: redis
+    name: mera-hisaab-redis
+    plan: free
+    ipAllowList: []
 
 databases:
   - name: mera-hisaab-db
