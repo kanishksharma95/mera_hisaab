@@ -52,6 +52,11 @@ DJANGO_APPS = [
     "django.contrib.humanize",
 ]
 
+# Third-party apps.
+THIRD_PARTY_APPS = [
+    "axes",  # login brute-force protection
+]
+
 # Local apps. Additional apps (products, sales, ...) are added per phase.
 LOCAL_APPS = [
     "core",
@@ -67,7 +72,7 @@ LOCAL_APPS = [
     "expenses",
 ]
 
-INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 # ---------------------------------------------------------------------------
 # Middleware
@@ -84,6 +89,8 @@ MIDDLEWARE = [
     # Resolves the active tenant (business) for the request. Must run AFTER
     # AuthenticationMiddleware because it relies on request.user.
     "core.middleware.CurrentBusinessMiddleware",
+    # django-axes must be the LAST middleware so it can see the final request.
+    "axes.middleware.AxesMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -148,12 +155,42 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
 AUTHENTICATION_BACKENDS = [
+    # AxesStandaloneBackend must be FIRST so it can block locked-out users.
+    "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "core:dashboard"
 LOGOUT_REDIRECT_URL = "accounts:login"
+
+# ---------------------------------------------------------------------------
+# Cache (Redis in prod if REDIS_URL is set, else in-memory for dev)
+# ---------------------------------------------------------------------------
+REDIS_URL = env("REDIS_URL", default="")
+if REDIS_URL:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "mera-hisaab-cache",
+        }
+    }
+
+# ---------------------------------------------------------------------------
+# django-axes — login brute-force protection
+# ---------------------------------------------------------------------------
+AXES_FAILURE_LIMIT = 5            # lock after 5 failed login attempts
+AXES_COOLOFF_TIME = 0.25         # 0.25 hours = 15 minute lockout
+AXES_RESET_ON_SUCCESS = True     # clear the counter on a successful login
+AXES_LOCKOUT_CALLABLE = None
+AXES_BEHIND_REVERSE_PROXY = True  # Render forwards the real client IP via proxy
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

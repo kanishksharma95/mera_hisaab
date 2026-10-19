@@ -13,11 +13,19 @@ from django.contrib.auth.views import (
 )
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.decorators import method_decorator
 from django.views.generic import CreateView
+from django_ratelimit.decorators import ratelimit
 
 from .forms import EmailAuthenticationForm, ProfileForm, RegistrationForm
 
+# Throttle abuse-prone public POST endpoints to 5 requests/min per IP.
+_ip_rate_limit = method_decorator(
+    ratelimit(key="ip", rate="5/m", method="POST", block=True), name="dispatch"
+)
 
+
+@_ip_rate_limit
 class RegisterView(CreateView):
     """Create the user account, log them in, and start onboarding."""
 
@@ -70,6 +78,7 @@ class MeraPasswordChangeView(PasswordChangeView):
         return super().form_valid(form)
 
 
+@_ip_rate_limit
 class MeraPasswordResetView(PasswordResetView):
     template_name = "accounts/password_reset.html"
     email_template_name = "accounts/password_reset_email.html"
