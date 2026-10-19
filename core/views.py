@@ -8,7 +8,9 @@ tenant rather than showing hardcoded numbers.
 """
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.db import connection
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -19,17 +21,37 @@ from core.mixins import business_required, role_required
 
 
 def healthz(request):
-    """Additive liveness/readiness probe. Checks the DB connection.
+    """Additive liveness/readiness probe.
 
-    Unauthenticated so platform/load-balancer health checks can reach it.
+    Checks the DB connection (fatal: returns 503 if down) and does a cache
+    round-trip (non-fatal: reported but never fails the probe, so a flaky
+    cache can't take the whole service offline). Unauthenticated so platform
+    health checks can reach it.
     """
+    payload = {"status": "ok"}
+    status_code = 200
+
+    # Database — fatal to the probe.
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1;")
             cursor.fetchone()
-        return JsonResponse({"status": "ok", "database": "connected"}, status=200)
+        payload["database"] = "connected"
     except Exception as exc:  # pragma: no cover - defensive probe
-        return JsonResponse({"status": "error", "database": str(exc)}, status=503)
+        payload["status"] = "error"
+        payload["database"] = str(exc)
+        status_code = 503
+
+    # Cache / Redis — non-fatal; reports which backend is live and whether a
+    # set/get round-trip works.
+    payload["cache_backend"] = settings.CACHES["default"]["BACKEND"].rsplit(".", 1)[-1]
+    try:
+        cache.set("healthz", "ok", 10)
+        payload["cache"] = "connected" if cache.get("healthz") == "ok" else "unavailable"
+    except Exception as exc:  # pragma: no cover - defensive probe
+        payload["cache"] = f"error: {exc}"
+
+    return JsonResponse(payload, status=status_code)
 
 
 @login_required
