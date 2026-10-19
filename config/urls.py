@@ -8,6 +8,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 
+from core import views as core_views
 from customers import views as customer_views
 from sales import views as sales_views
 
@@ -17,6 +18,7 @@ admin.site.site_title = "Mera Hisaab Admin"
 admin.site.index_title = "Platform administration"
 
 urlpatterns = [
+    path("healthz/", core_views.healthz, name="healthz"),
     path("admin/", admin.site.urls),
     path("accounts/", include("accounts.urls")),
     path("products/", include("products.urls")),

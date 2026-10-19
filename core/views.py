@@ -9,11 +9,27 @@ tenant rather than showing hardcoded numbers.
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
+from django.db import connection
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from businesses.models import BusinessMembership
 from core.mixins import business_required, role_required
+
+
+def healthz(request):
+    """Additive liveness/readiness probe. Checks the DB connection.
+
+    Unauthenticated so platform/load-balancer health checks can reach it.
+    """
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1;")
+            cursor.fetchone()
+        return JsonResponse({"status": "ok", "database": "connected"}, status=200)
+    except Exception as exc:  # pragma: no cover - defensive probe
+        return JsonResponse({"status": "error", "database": str(exc)}, status=503)
 
 
 @login_required
