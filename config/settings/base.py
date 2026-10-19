@@ -187,6 +187,41 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # ---------------------------------------------------------------------------
+# Storage (local filesystem in dev; Cloudflare R2 / S3 in prod if configured)
+# ---------------------------------------------------------------------------
+# When R2_BUCKET is set, user-uploaded media is stored on Cloudflare R2
+# (S3-compatible, 10 GB free, zero egress). Without it, media falls back to the
+# local filesystem (MEDIA_ROOT). Static files always use WhiteNoise.
+R2_BUCKET = env("R2_BUCKET", default="")
+if R2_BUCKET:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "bucket_name": R2_BUCKET,
+                "endpoint_url": env("R2_ENDPOINT", default=""),
+                "access_key": env("R2_ACCESS_KEY", default=""),
+                "secret_key": env("R2_SECRET_KEY", default=""),
+                "region_name": "auto",
+                "file_overwrite": False,
+                "custom_domain": env("R2_CUSTOM_DOMAIN", default=None),
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+# ---------------------------------------------------------------------------
 # Sessions & security defaults (hardened further in prod.py)
 # ---------------------------------------------------------------------------
 SESSION_COOKIE_HTTPONLY = True
