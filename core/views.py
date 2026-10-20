@@ -51,6 +51,18 @@ def healthz(request):
     except Exception as exc:  # pragma: no cover - defensive probe
         payload["cache"] = f"error: {exc}"
 
+    # Integration readiness — booleans only (never secret values), so ops can
+    # confirm which optional features are wired without logging into the host.
+    try:
+        from payments.gateway import is_configured as _razorpay_ready
+        payload["razorpay"] = "configured" if _razorpay_ready() else "disabled"
+    except Exception:  # pragma: no cover - defensive probe
+        payload["razorpay"] = "unknown"
+    payload["email"] = "smtp" if "smtp" in settings.EMAIL_BACKEND else "console"
+    payload["media"] = (
+        "r2" if settings.STORAGES["default"]["BACKEND"].endswith("S3Storage") else "local"
+    )
+
     return JsonResponse(payload, status=status_code)
 
 
