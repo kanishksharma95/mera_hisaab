@@ -5,10 +5,13 @@ services:
     branch: dev
     plan: free
     buildCommand: "./render_build.sh"
-    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers $WEB_CONCURRENCY --timeout 120"
+    healthCheckPath: /healthz/
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: WEB_CONCURRENCY
+        value: "2"
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.prod
       - key: DJANGO_SECRET_KEY
@@ -62,6 +65,8 @@ services:
       - key: R2_ACCESS_KEY
         sync: false
       - key: R2_SECRET_KEY
+        sync: false
+      - key: R2_CUSTOM_DOMAIN
         sync: false
 
   # Free Redis (Key Value) instance — internal connections only.
