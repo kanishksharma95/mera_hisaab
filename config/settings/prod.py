@@ -47,6 +47,8 @@ if env("EMAIL_HOST_USER", default=""):
     EMAIL_HOST_USER = env("EMAIL_HOST_USER")
     EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="").replace(" ", "")
     EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+    EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
     DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default=f"Mera Hisaab <{EMAIL_HOST_USER}>")
 else:
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+    EMAIL_TIMEOUT = 5

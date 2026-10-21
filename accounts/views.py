@@ -78,11 +78,25 @@ class MeraPasswordChangeView(PasswordChangeView):
         return super().form_valid(form)
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 @_ip_rate_limit
 class MeraPasswordResetView(PasswordResetView):
     template_name = "accounts/password_reset.html"
     email_template_name = "accounts/password_reset_email.html"
     success_url = reverse_lazy("accounts:password_reset_done")
+
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except Exception as exc:
+            logger.error("Failed to send password reset email: %s", exc)
+            messages.error(
+                self.request,
+                "Unable to send password reset email at this moment. Please check server email settings or contact support.",
+            )
+            return self.render_to_response(self.get_context_data(form=form))
 
 
 class MeraPasswordResetDoneView(PasswordResetDoneView):
