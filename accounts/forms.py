@@ -83,3 +83,17 @@ class ProfileForm(BootstrapFormMixin, forms.ModelForm):
         phone = (self.cleaned_data.get("phone") or "").strip()
         validate_phone(phone)
         return phone
+
+
+from django.contrib.auth.forms import PasswordResetForm
+
+class MeraPasswordResetForm(BootstrapFormMixin, PasswordResetForm):
+    """Password reset form that explicitly informs user if email is not found."""
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if not User.objects.filter(email__iexact=email, is_active=True).exists():
+            raise forms.ValidationError(
+                _("No active account found with this email. Please check your spelling or create a new account.")
+            )
+        return email

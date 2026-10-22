@@ -81,8 +81,11 @@ class MeraPasswordChangeView(PasswordChangeView):
 import logging
 logger = logging.getLogger(__name__)
 
+from .forms import EmailAuthenticationForm, ProfileForm, RegistrationForm, MeraPasswordResetForm
+
 @_ip_rate_limit
 class MeraPasswordResetView(PasswordResetView):
+    form_class = MeraPasswordResetForm
     template_name = "accounts/password_reset.html"
     email_template_name = "accounts/password_reset_email.html"
     success_url = reverse_lazy("accounts:password_reset_done")
