@@ -87,7 +87,9 @@ from .forms import EmailAuthenticationForm, ProfileForm, RegistrationForm, MeraP
 class MeraPasswordResetView(PasswordResetView):
     form_class = MeraPasswordResetForm
     template_name = "accounts/password_reset.html"
-    email_template_name = "accounts/password_reset_email.html"
+    email_template_name = "accounts/password_reset_email.html"  # plain-text fallback
+    html_email_template_name = "accounts/password_reset_email_html.html"  # rich HTML
+    subject_template_name = "accounts/password_reset_subject.txt"
     success_url = reverse_lazy("accounts:password_reset_done")
 
     def form_valid(self, form):
