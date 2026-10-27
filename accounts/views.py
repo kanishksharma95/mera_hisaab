@@ -39,7 +39,9 @@ class RegisterView(CreateView):
 
     def form_valid(self, form):
         user = form.save()
-        login(self.request, user)
+        # Two auth backends are configured (Axes + ModelBackend), so login()
+        # can't infer which to use — name it explicitly to avoid ValueError.
+        login(self.request, user, backend="django.contrib.auth.backends.ModelBackend")
         messages.success(
             self.request, "Welcome to Mera Hisaab! Let's set up your business."
         )
