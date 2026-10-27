@@ -58,7 +58,13 @@ def healthz(request):
         payload["razorpay"] = "configured" if _razorpay_ready() else "disabled"
     except Exception:  # pragma: no cover - defensive probe
         payload["razorpay"] = "unknown"
-    payload["email"] = "smtp" if "smtp" in settings.EMAIL_BACKEND else "console"
+    _email_backend = settings.EMAIL_BACKEND
+    if "brevo" in _email_backend or "anymail" in _email_backend:
+        payload["email"] = "brevo"
+    elif "smtp" in _email_backend:
+        payload["email"] = "smtp"
+    else:
+        payload["email"] = "console"
     payload["media"] = (
         "r2" if settings.STORAGES["default"]["BACKEND"].endswith("S3Storage") else "local"
     )

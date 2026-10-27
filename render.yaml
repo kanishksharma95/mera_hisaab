@@ -36,7 +36,11 @@ services:
       # Force Postgres in prod (never silently fall back to SQLite).
       - key: USE_SQLITE
         value: "0"
-      # --- Email (Gmail SMTP): non-secret config here, secrets below ---
+      # --- Email ---
+      # PREFERRED on Render: Brevo over HTTPS. Render's free tier blocks
+      # outbound SMTP ports (25/465/587), so the Gmail SMTP vars below will
+      # time out here — set BREVO_API_KEY and the app uses Brevo instead.
+      # --- Gmail SMTP (non-secret config; used only if BREVO_API_KEY unset) ---
       - key: EMAIL_HOST
         value: smtp.gmail.com
       - key: EMAIL_PORT
@@ -44,7 +48,10 @@ services:
       - key: EMAIL_USE_TLS
         value: "1"
       # --- Secrets: set these values in the Render dashboard (sync: false
-      #     keeps them OUT of git; blueprint only declares that they exist) ---
+      #     keeps them OUT of git; blueprint only declares that they exist).
+      #     DEFAULT_FROM_EMAIL must equal your verified Brevo sender address. ---
+      - key: BREVO_API_KEY
+        sync: false
       - key: EMAIL_HOST_USER
         sync: false
       - key: EMAIL_HOST_PASSWORD

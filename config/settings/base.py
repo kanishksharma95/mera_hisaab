@@ -55,6 +55,7 @@ DJANGO_APPS = [
 # Third-party apps.
 THIRD_PARTY_APPS = [
     "axes",  # login brute-force protection
+    "anymail",  # HTTP-based email (Brevo) — works where outbound SMTP is blocked
 ]
 
 # Local apps. Additional apps (products, sales, ...) are added per phase.

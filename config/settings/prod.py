@@ -40,7 +40,17 @@ SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # --- Email (real backend in production) ---
-if env("EMAIL_HOST_USER", default=""):
+# Priority: Brevo (HTTP API) > SMTP > console.
+# Hosts like Render's free tier block outbound SMTP ports (25/465/587), so SMTP
+# to Gmail silently times out there. Brevo delivers over HTTPS (port 443),
+# which those hosts allow — so it is preferred whenever BREVO_API_KEY is set.
+# Brevo needs no custom domain: verify a single sender (e.g. your Gmail) in the
+# Brevo dashboard, then set DEFAULT_FROM_EMAIL to that exact verified address.
+if env("BREVO_API_KEY", default=""):
+    EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
+    ANYMAIL = {"BREVO_API_KEY": env("BREVO_API_KEY")}
+    DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")  # must be your verified Brevo sender
+elif env("EMAIL_HOST_USER", default=""):
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
     EMAIL_PORT = env.int("EMAIL_PORT", default=587)
