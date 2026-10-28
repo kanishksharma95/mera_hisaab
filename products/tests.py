@@ -177,3 +177,60 @@ class CategoryTests(TestCase):
         self.client.post(reverse("products:category_add"), {"name": "Snacks", "description": ""})
         cat = ProductCategory.objects.get(name="Snacks")
         self.assertEqual(cat.business, self.business)
+
+
+class ProductEditTests(TestCase):
+    def setUp(self):
+        self.user, self.business = make_user_with_business("e@shop.com", "E Store")
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["active_business_id"] = self.business.id
+        session.save()
+        self.product = Product.objects.create(
+            business=self.business, name="Old Name",
+            purchase_price=Decimal("100"), selling_price=Decimal("150"),
+            tax_percent=Decimal("0"), unit="pcs", current_stock=Decimal("5"),
+        )
+
+    def test_edit_product_updates_fields(self):
+        resp = self.client.post(
+            reverse("products:edit", args=[self.product.pk]),
+            {
+                "name": "New Name",
+                "purchase_price": "110",
+                "selling_price": "160",
+                "tax_percent": "18",
+                "unit": "pcs",
+                "min_stock_level": "0",
+            },
+        )
+        self.assertRedirects(resp, reverse("products:detail", args=[self.product.pk]))
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.name, "New Name")
+        self.assertEqual(self.product.selling_price, Decimal("160.00"))
+
+
+class ProductToggleTests(TestCase):
+    def setUp(self):
+        self.user, self.business = make_user_with_business("t@shop.com", "T Store")
+        self.client.force_login(self.user)
+        session = self.client.session
+        session["active_business_id"] = self.business.id
+        session.save()
+        self.product = Product.objects.create(
+            business=self.business, name="Toggle Me",
+            selling_price=Decimal("50"), is_active=True,
+        )
+
+    def test_toggle_deactivates_product(self):
+        resp = self.client.post(reverse("products:toggle", args=[self.product.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.product.refresh_from_db()
+        self.assertFalse(self.product.is_active)
+
+    def test_toggle_reactivates_product(self):
+        self.product.is_active = False
+        self.product.save(update_fields=["is_active"])
+        self.client.post(reverse("products:toggle", args=[self.product.pk]))
+        self.product.refresh_from_db()
+        self.assertTrue(self.product.is_active)

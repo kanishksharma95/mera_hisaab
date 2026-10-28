@@ -81,3 +81,18 @@ class ReportsTests(TestCase):
         resp = self.client.get(reverse("core:reports"), {"period": "month"})
         # Only this shop's revenue is counted, never the other business's.
         self.assertEqual(resp.context["pnl"]["revenue"], Decimal("1180"))
+
+
+class HealthzTests(TestCase):
+    def test_healthz_returns_json_with_expected_keys(self):
+        import json
+
+        resp = self.client.get("/healthz/")
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.content)
+        self.assertEqual(data["status"], "ok")
+        self.assertIn("database", data)
+        self.assertEqual(data["database"], "connected")
+        self.assertIn("cache", data)
+        self.assertIn("email", data)
+        self.assertIn("razorpay", data)

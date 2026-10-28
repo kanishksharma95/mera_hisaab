@@ -61,3 +61,46 @@ class RegistrationFlowTests(TestCase):
             {"username": "log@shop.com", "password": "StrongPass!234"},
         )
         self.assertEqual(resp.status_code, 302)
+
+
+class PasswordResetFlowTests(TestCase):
+    def test_reset_sends_email_for_existing_user(self):
+        from django.core import mail
+
+        User.objects.create_user(email="reset@shop.com", password="OldPass!234")
+        resp = self.client.post(
+            reverse("accounts:password_reset"), {"email": "reset@shop.com"}
+        )
+        self.assertRedirects(resp, reverse("accounts:password_reset_done"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("reset@shop.com", mail.outbox[0].to)
+
+    def test_reset_no_email_for_nonexistent_user(self):
+        from django.core import mail
+
+        resp = self.client.post(
+            reverse("accounts:password_reset"), {"email": "nobody@shop.com"}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(len(mail.outbox), 0)
+
+
+class PasswordChangeTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="chg@shop.com", password="OldPass!234"
+        )
+        self.client.force_login(self.user)
+
+    def test_password_change_succeeds(self):
+        resp = self.client.post(
+            reverse("accounts:password_change"),
+            {
+                "old_password": "OldPass!234",
+                "new_password1": "NewStrong!567",
+                "new_password2": "NewStrong!567",
+            },
+        )
+        self.assertRedirects(resp, reverse("accounts:profile"))
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NewStrong!567"))
