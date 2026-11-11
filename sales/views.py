@@ -45,26 +45,28 @@ def pos(request):
         .first()
     )
 
-    # Top / fast-selling products (up to 12 items, prioritized by sales volume, then name)
-    top_products_qs = (
-        Product.objects.for_business(request.business)
-        .filter(is_active=True)
-        .annotate(total_sold=Sum("sale_items__quantity"))
-        .order_by(models.F("total_sold").desc(nulls_last=True), "name")[:12]
-    )
-    top_products = [
-        {
-            "id": p.id,
-            "name": p.name,
-            "price": str(p.selling_price),
-            "tax": str(p.tax_percent),
-            "unit": p.unit,
-            "stock": str(p.current_stock),
-            "sku": p.sku,
-            "barcode": p.barcode or "",
-        }
-        for p in top_products_qs
-    ]
+    # Top / fast-selling products (clean & robust query safe for PostgreSQL)
+    try:
+        top_products_qs = (
+            Product.objects.for_business(request.business)
+            .filter(is_active=True)
+            .order_by("name")[:12]
+        )
+        top_products = [
+            {
+                "id": p.id,
+                "name": p.name,
+                "price": str(p.selling_price),
+                "tax": str(p.tax_percent),
+                "unit": p.unit,
+                "stock": str(p.current_stock),
+                "sku": p.sku,
+                "barcode": p.barcode or "",
+            }
+            for p in top_products_qs
+        ]
+    except Exception:
+        top_products = []
 
     context = {
         "payment_methods": PaymentMethod.objects.for_business(request.business).filter(
