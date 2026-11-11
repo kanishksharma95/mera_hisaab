@@ -22,10 +22,12 @@ services:
         value: ".onrender.com,localhost,127.0.0.1"
       - key: DJANGO_CSRF_TRUSTED_ORIGINS
         value: "https://*.onrender.com"
+      # External persistent Postgres (Neon/Supabase free tier — does NOT expire,
+      # unlike Render's free DB which self-deletes after ~30 days).
+      # Paste the FULL connection string (incl. ?sslmode=require) into the
+      # Render dashboard; sync:false keeps the secret OUT of git.
       - key: DATABASE_URL
-        fromDatabase:
-          name: mera-hisaab-db
-          property: connectionString
+        sync: false
       # Shared cache for rate-limit + axes counters across gunicorn workers.
       # If this service is removed, the app falls back to in-memory cache.
       - key: REDIS_URL
@@ -82,8 +84,7 @@ services:
     plan: free
     ipAllowList: []
 
-databases:
-  - name: mera-hisaab-db
-    databaseName: mera_hisaab
-    user: mera_hisaab
-    plan: free
+# NOTE: No `databases:` block here on purpose. The previous Render free Postgres
+# (`mera-hisaab-db`) expired and was deleted after ~30 days, taking its data with
+# it. Postgres is now an EXTERNAL persistent provider (Neon/Supabase) wired via
+# the DATABASE_URL secret set in the Render dashboard (see envVars above).
