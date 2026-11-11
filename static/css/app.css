@@ -418,6 +418,14 @@ button.htmx-request[data-loading] .mh-btn-label { opacity: .6; }
   transition: transform .1s ease, border-color .1s ease, box-shadow .1s ease;
 }
 .mh-prod-btn:hover, .mh-prod-btn:active { border-color: var(--mh-primary); box-shadow: var(--mh-shadow-md); transform: translateY(-2px); }
+.mh-quick-tile {
+  text-align: left; border: 1px solid var(--mh-border); background: var(--mh-card-bg);
+  color: var(--mh-text); border-radius: 10px; cursor: pointer;
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+}
+.mh-quick-tile:hover, .mh-quick-tile:active {
+  border-color: var(--mh-primary); box-shadow: var(--mh-shadow-sm); transform: translateY(-2px);
+}
 .mh-cart { position: sticky; top: 5rem; }
 .mh-cart-items { max-height: 40vh; overflow-y: auto; }
 .mh-cart-row { display: flex; gap: .6rem; align-items: flex-start; padding: .6rem 0; border-bottom: 1px solid var(--mh-border); }

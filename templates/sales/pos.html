@@ -5,13 +5,16 @@
 
 {% block content %}
 <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+<input type="hidden" id="defaultCashMethodId" value="{{ default_cash_method_id }}">
+<input type="hidden" id="defaultCreditMethodId" value="{{ default_credit_method_id }}">
+
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
   <h4 class="mb-0">{% trans "New Sale (POS)" %}</h4>
   <a href="{% url 'sales:list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-receipt"></i> {% trans "All sales" %}</a>
 </div>
 
 <div class="row g-3">
-  <!-- Product search + results -->
+  <!-- Product search + Fast Grid + Results -->
   <div class="col-lg-7">
     <div class="mh-card p-3 mb-3">
       <div class="input-group input-group-lg">
@@ -20,13 +23,76 @@
                placeholder="{% trans 'Search or scan product…' %}" autocomplete="off" autofocus>
       </div>
     </div>
+
+    <!-- Quick Pick / Fast Items (Top Selling) -->
+    {% if top_products %}
+    <div class="mh-card p-3 mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="small fw-bold text-uppercase tracking-wider text-muted">
+          <i class="bi bi-lightning-charge-fill text-warning me-1"></i>{% trans "Fast Items (Tap to Add)" %}
+        </span>
+        <span class="badge bg-light text-muted border small">{% trans "Quick Pick" %}</span>
+      </div>
+      <div class="row g-2" id="posQuickPicks">
+        {% for p in top_products %}
+        <div class="col-6 col-sm-4 col-md-3">
+          <button type="button" class="mh-quick-tile w-100 p-2 text-start position-relative" data-product-id="{{ p.id }}">
+            <div class="fw-semibold text-truncate small mb-1" title="{{ p.name }}">{{ p.name }}</div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-bold text-success small">{{ currency_symbol }}{{ p.price }}</span>
+              <span class="badge bg-light text-muted border small mh-stock-badge" id="quickStock_{{ p.id }}">{{ p.stock }}</span>
+            </div>
+          </button>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     <div id="posResults" class="row g-2"></div>
   </div>
 
   <!-- Cart + checkout -->
   <div class="col-lg-5">
     <div class="mh-card p-3 mh-cart">
-      <h6 class="mb-3"><i class="bi bi-cart3"></i> {% trans "Cart" %}</h6>
+      <!-- Success Toast Banner for Instant Sales -->
+      <div id="posSuccessAlert" class="alert alert-success d-none align-items-center justify-content-between py-2 px-3 mb-3 shadow-sm border-0">
+        <div>
+          <div class="fw-bold text-success"><i class="bi bi-check-circle-fill me-1"></i> <span id="posSuccessTitle">{% trans "Sale Complete!" %}</span></div>
+          <div class="small text-muted" id="posSuccessDetail"></div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <a id="posViewInvoice" href="#" target="_blank" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-receipt"></i> {% trans "Bill" %}
+          </a>
+          <button type="button" class="btn-close small" id="posCloseSuccess" aria-label="Close"></button>
+        </div>
+      </div>
+
+      <!-- Customer Selector (Always Visible: Regular vs Random) -->
+      <div class="p-2 mb-3 rounded-3 border bg-light-subtle">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <label for="posCustomer" class="form-label small mb-0 fw-semibold">
+            <i class="bi bi-person-fill text-primary me-1"></i>{% trans "Grahak / Customer" %}
+          </label>
+          <span class="badge bg-secondary-subtle text-secondary small" id="customerBadge">
+            {% trans "Random (Walk-in)" %}
+          </span>
+        </div>
+        <select id="posCustomer" class="form-select form-select-sm">
+          <option value="">{% trans "Walk-in (Random Grahak)" %}</option>
+          {% for c in customers %}
+          <option value="{{ c.id }}" data-name="{{ c.name }}" data-phone="{{ c.phone|default:'' }}" data-balance="{{ c.current_balance|default:'0' }}">
+            {{ c.name }}{% if c.phone %} · {{ c.phone }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+        <div id="customerBalRow" class="small mt-1 text-muted d-none">
+          <span>{% trans "Pichhla Udhaar" %}: <strong id="customerBalVal" class="text-danger"></strong></span>
+        </div>
+      </div>
+
+      <h6 class="mb-2"><i class="bi bi-cart3"></i> {% trans "Cart" %}</h6>
       <div id="cartItems" class="mh-cart-items"></div>
       <div id="cartEmpty" class="text-muted text-center py-4">{% trans "Cart is empty. Tap a product to add." %}</div>
 
@@ -45,28 +111,43 @@
       </div>
 
       <div class="mt-3">
-        <label class="form-label">{% trans "Customer" %} <span class="text-muted small">({% trans "required for udhaar" %})</span></label>
-        <select id="posCustomer" class="form-select mb-2">
-          <option value="">{% trans "Walk-in customer" %}</option>
-          {% for c in customers %}<option value="{{ c.id }}">{{ c.name }}{% if c.phone %} · {{ c.phone }}{% endif %}</option>{% endfor %}
-        </select>
-
-        <label class="form-label">{% trans "Payment method" %}</label>
-        <select id="posMethod" class="form-select mb-2">
-          {% for m in payment_methods %}<option value="{{ m.id }}" data-credit="{{ m.is_credit|yesno:'1,0' }}">{{ m.name }}</option>{% endfor %}
-        </select>
-
-        <label class="form-label">{% trans "Amount received" %}</label>
-        <div class="input-group mb-3">
-          <span class="input-group-text">{{ currency_symbol }}</span>
-          <input type="number" id="posPaid" class="form-control" value="0" min="0" step="0.01">
-          <button class="btn btn-outline-secondary" type="button" id="posExact">{% trans "Exact" %}</button>
-        </div>
-
         <div id="posError" class="alert alert-danger py-2 d-none"></div>
-        <button id="posComplete" class="btn btn-primary btn-lg w-100" disabled>
-          <span class="mh-btn-label">{% trans "Complete Sale" %}</span>
+
+        <!-- 1. ⚡ Quick Cash Button (Works for both Random & Regular) -->
+        <button id="posQuickCash" type="button" class="btn btn-success btn-lg w-100 fw-bold mb-2 shadow-sm py-2" disabled>
+          <i class="bi bi-lightning-charge-fill me-1"></i> <span id="quickCashBtnLabel">{% trans "⚡ Quick Cash" %}</span> (<span id="quickCashTotal">{{ currency_symbol }}0.00</span>)
         </button>
+
+        <!-- 2. 📝 Quick Udhaar Button (For Regular Customers' Khata) -->
+        <button id="posQuickCredit" type="button" class="btn btn-outline-warning text-dark w-100 fw-semibold mb-3 py-2" disabled>
+          <i class="bi bi-journal-bookmark-fill text-warning me-1"></i> <span id="quickCreditBtnLabel">{% trans "📝 Khate mein Daalo (Udhaar)" %}</span>
+        </button>
+
+        <!-- 3. Bada Order / Custom Payment / Bill Print (Collapsible) -->
+        <div class="border-top pt-2">
+          <button class="btn btn-link btn-sm text-decoration-none p-0 w-100 text-start d-flex justify-content-between align-items-center text-muted" type="button" data-bs-toggle="collapse" data-bs-target="#posAdvancedCheckout">
+            <span><i class="bi bi-sliders2 me-1"></i> {% trans "Bada Order / UPI / Bill Print" %}</span>
+            <i class="bi bi-chevron-down small"></i>
+          </button>
+
+          <div class="collapse mt-2" id="posAdvancedCheckout">
+            <label class="form-label small mb-1">{% trans "Payment method" %}</label>
+            <select id="posMethod" class="form-select form-select-sm mb-2">
+              {% for m in payment_methods %}<option value="{{ m.id }}" data-credit="{{ m.is_credit|yesno:'1,0' }}" {% if m.id == default_cash_method_id %}selected{% endif %}>{{ m.name }}</option>{% endfor %}
+            </select>
+
+            <label class="form-label small mb-1">{% trans "Amount received" %}</label>
+            <div class="input-group input-group-sm mb-3">
+              <span class="input-group-text">{{ currency_symbol }}</span>
+              <input type="number" id="posPaid" class="form-control" value="0" min="0" step="0.01">
+              <button class="btn btn-outline-secondary" type="button" id="posExact">{% trans "Exact" %}</button>
+            </div>
+
+            <button id="posComplete" class="btn btn-primary w-100" disabled>
+              <i class="bi bi-receipt me-1"></i> <span class="mh-btn-label">{% trans "Bada Bill / Print Invoice" %}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -74,6 +155,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ top_products|json_script:"topProductsJson" }}
 <script>
 (function () {
   "use strict";
@@ -84,6 +166,64 @@
   const $ = (id) => document.getElementById(id);
 
   const money = (n) => SYM + (Math.round((Number(n) + Number.EPSILON) * 100) / 100).toFixed(2);
+
+  // Parse top products
+  let topProducts = [];
+  try {
+    const el = $("topProductsJson");
+    if (el) topProducts = JSON.parse(el.textContent);
+  } catch(e) {}
+  const topProductsMap = {};
+  topProducts.forEach(p => { topProductsMap[p.id] = p; });
+
+  // Bind Quick Pick tiles
+  document.querySelectorAll("#posQuickPicks button").forEach(btn => {
+    const pid = btn.dataset.productId;
+    btn.addEventListener("click", () => {
+      if (topProductsMap[pid]) {
+        addToCart(topProductsMap[pid]);
+        playBeep(true);
+      }
+    });
+  });
+
+  // Customer change listener (Regular vs Random)
+  function getSelectedCustomer() {
+    const sel = $("posCustomer");
+    if (!sel.value) return null;
+    const opt = sel.options[sel.selectedIndex];
+    return {
+      id: sel.value,
+      name: opt.dataset.name || opt.text,
+      phone: opt.dataset.phone || "",
+      balance: opt.dataset.balance || "0",
+    };
+  }
+
+  function updateCustomerUi() {
+    const cust = getSelectedCustomer();
+    const badge = $("customerBadge");
+    const balRow = $("customerBalRow");
+    const balVal = $("customerBalVal");
+    const cashLabel = $("quickCashBtnLabel");
+    const creditLabel = $("quickCreditBtnLabel");
+
+    if (cust) {
+      badge.className = "badge bg-primary-subtle text-primary border border-primary-subtle small";
+      badge.textContent = "Regular Customer: " + cust.name;
+      balVal.textContent = money(cust.balance);
+      balRow.classList.remove("d-none");
+      cashLabel.textContent = `⚡ Cash Bikri (${cust.name})`;
+      creditLabel.textContent = `📝 Khate mein Daalo (${cust.name} Udhaar)`;
+    } else {
+      badge.className = "badge bg-secondary-subtle text-secondary small";
+      badge.textContent = "Random (Walk-in)";
+      balRow.classList.add("d-none");
+      cashLabel.textContent = "⚡ Quick Cash";
+      creditLabel.textContent = "📝 Khate mein Daalo (Udhaar)";
+    }
+  }
+  $("posCustomer").addEventListener("change", updateCustomerUi);
 
   // ---- Web Audio Beep Feedback ----
   function playBeep(success) {
@@ -144,7 +284,7 @@
     }
   });
 
-  // Global scanner listener (hardware scanners type rapid characters < 50ms)
+  // Global scanner listener
   let scanBuffer = "";
   let lastKeyTime = Date.now();
   window.addEventListener("keydown", (e) => {
@@ -176,13 +316,15 @@
       col.innerHTML = `<button type="button" class="mh-prod-btn w-100">
         <div class="fw-semibold text-truncate">${escapeHtml(p.name)}</div>
         <div class="small text-muted">${money(p.price)} · ${escapeHtml(p.unit)}</div>
-        <div class="small ${Number(p.stock) <= 0 ? 'text-danger' : 'text-muted'}">${p.stock} ${escapeHtml(p.unit)}</div>
+        <div class="small ${Number(p.stock) <= 0 ? 'text-danger' : 'text-muted'}"><span class="mh-stock-val" id="searchStock_${p.id}">${p.stock}</span> ${escapeHtml(p.unit)}</div>
       </button>`;
-      col.querySelector("button").addEventListener("click", () => addToCart(p));
+      col.querySelector("button").addEventListener("click", () => {
+        addToCart(p);
+        playBeep(true);
+      });
       box.appendChild(col);
     });
   }
-
 
   function addToCart(p) {
     let line = cart.find(l => l.id === p.id);
@@ -234,7 +376,10 @@
     $("sumSubtotal").textContent = money(subtotal);
     $("sumTax").textContent = money(tax);
     $("sumTotal").textContent = money(total);
+    $("quickCashTotal").textContent = money(total);
     $("posComplete").disabled = cart.length === 0;
+    $("posQuickCash").disabled = cart.length === 0;
+    $("posQuickCredit").disabled = cart.length === 0;
     return total;
   }
   $("orderDiscount").addEventListener("input", recalc);
@@ -242,7 +387,169 @@
 
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
-  // ---- Checkout ----
+  function updateDomStockAfterSale(soldCart) {
+    soldCart.forEach(l => {
+      const badge = $("quickStock_" + l.id);
+      if (badge) {
+        const cur = parseFloat(badge.textContent) || 0;
+        const nextVal = Math.max(0, cur - l.qty);
+        badge.textContent = Number.isInteger(nextVal) ? nextVal : nextVal.toFixed(2);
+      }
+      const sBadge = $("searchStock_" + l.id);
+      if (sBadge) {
+        const cur = parseFloat(sBadge.textContent) || 0;
+        const nextVal = Math.max(0, cur - l.qty);
+        sBadge.textContent = Number.isInteger(nextVal) ? nextVal : nextVal.toFixed(2);
+      }
+    });
+  }
+
+  // ---- ⚡ 1-Tap Quick Cash Checkout ----
+  $("posQuickCash").addEventListener("click", () => {
+    const btn = $("posQuickCash");
+    const err = $("posError");
+    err.classList.add("d-none");
+    btn.disabled = true;
+
+    const cust = getSelectedCustomer();
+    const defaultCashId = Number($("defaultCashMethodId").value) || Number($("posMethod").value);
+    const totalAmount = recalc();
+
+    const payload = {
+      items: cart.map(l => ({ product: l.id, quantity: l.qty, unit_price: l.price, discount: l.discount || 0 })),
+      customer: cust ? cust.id : null,
+      order_discount: Number($("orderDiscount").value) || 0,
+      payments: [{ method: defaultCashId, amount: totalAmount }],
+    };
+
+    const soldCart = [...cart];
+
+    fetch("{% url 'sales:pos_checkout' %}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (ok) {
+          playBeep(true);
+          updateDomStockAfterSale(soldCart);
+
+          // Show Toast
+          const targetName = cust ? cust.name : "Walk-in Grahak";
+          $("posSuccessTitle").textContent = "⚡ Cash Bikri Done! " + d.invoice_number;
+          $("posSuccessDetail").textContent = `${money(d.total_amount)} Cash (${targetName}). Stock update ho gaya!`;
+          $("posViewInvoice").href = d.redirect;
+          const alertBox = $("posSuccessAlert");
+          alertBox.classList.remove("d-none");
+          alertBox.classList.add("d-flex");
+
+          // Reset cart & prepare for next customer
+          cart.length = 0;
+          $("orderDiscount").value = 0;
+          renderCart();
+          $("posSearch").focus();
+
+          setTimeout(() => {
+            alertBox.classList.add("d-none");
+            alertBox.classList.remove("d-flex");
+          }, 7000);
+        } else {
+          err.textContent = d.error || "{% trans 'Could not complete the sale.' %}";
+          err.classList.remove("d-none");
+          btn.disabled = false;
+        }
+      })
+      .catch(() => {
+        err.textContent = "{% trans 'Network error. Try again.' %}";
+        err.classList.remove("d-none");
+        btn.disabled = false;
+      });
+  });
+
+  // ---- 📝 1-Tap Quick Udhaar Checkout ----
+  $("posQuickCredit").addEventListener("click", () => {
+    const cust = getSelectedCustomer();
+    const err = $("posError");
+    err.classList.add("d-none");
+
+    if (!cust) {
+      err.textContent = "Kripya upar se Regular Customer select karein jinke khate mein udhaar likhna hai.";
+      err.classList.remove("d-none");
+      $("posCustomer").focus();
+      return;
+    }
+
+    const btn = $("posQuickCredit");
+    btn.disabled = true;
+
+    const defaultCreditId = Number($("defaultCreditMethodId").value);
+    const totalAmount = recalc();
+
+    const payload = {
+      items: cart.map(l => ({ product: l.id, quantity: l.qty, unit_price: l.price, discount: l.discount || 0 })),
+      customer: cust.id,
+      order_discount: Number($("orderDiscount").value) || 0,
+      payments: defaultCreditId ? [{ method: defaultCreditId, amount: totalAmount }] : [],
+    };
+
+    const soldCart = [...cart];
+
+    fetch("{% url 'sales:pos_checkout' %}", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+      body: JSON.stringify(payload),
+    })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => {
+        if (ok) {
+          playBeep(true);
+          updateDomStockAfterSale(soldCart);
+
+          // Update customer's balance attribute in memory
+          const sel = $("posCustomer");
+          const opt = sel.options[sel.selectedIndex];
+          const newBal = (parseFloat(opt.dataset.balance || "0") + totalAmount).toFixed(2);
+          opt.dataset.balance = newBal;
+          updateCustomerUi();
+
+          // Show Toast
+          $("posSuccessTitle").textContent = "📝 Udhaar Save! " + d.invoice_number;
+          $("posSuccessDetail").textContent = `${cust.name} ke khate mein ${money(d.total_amount)} udhaar jud gaye. Stock updated!`;
+          $("posViewInvoice").href = d.redirect;
+          const alertBox = $("posSuccessAlert");
+          alertBox.classList.remove("d-none");
+          alertBox.classList.add("d-flex");
+
+          // Reset cart & prepare for next sale
+          cart.length = 0;
+          $("orderDiscount").value = 0;
+          renderCart();
+          $("posSearch").focus();
+
+          setTimeout(() => {
+            alertBox.classList.add("d-none");
+            alertBox.classList.remove("d-flex");
+          }, 7000);
+        } else {
+          err.textContent = d.error || "{% trans 'Could not record udhaar.' %}";
+          err.classList.remove("d-none");
+          btn.disabled = false;
+        }
+      })
+      .catch(() => {
+        err.textContent = "{% trans 'Network error. Try again.' %}";
+        err.classList.remove("d-none");
+        btn.disabled = false;
+      });
+  });
+
+  $("posCloseSuccess").addEventListener("click", () => {
+    $("posSuccessAlert").classList.add("d-none");
+    $("posSuccessAlert").classList.remove("d-flex");
+  });
+
+  // ---- Bada Order / Standard / Print Invoice Checkout ----
   $("posComplete").addEventListener("click", () => {
     const btn = $("posComplete");
     const err = $("posError");
@@ -269,6 +576,7 @@
       .catch(() => { err.textContent = "{% trans 'Network error. Try again.' %}"; err.classList.remove("d-none"); btn.disabled = false; });
   });
 
+  updateCustomerUi();
   search();  // initial product list
 })();
 </script>

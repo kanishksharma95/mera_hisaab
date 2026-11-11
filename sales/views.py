@@ -5,7 +5,8 @@ from urllib.parse import quote
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db import models
+from django.db.models import F, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -25,6 +26,46 @@ from .services import create_sale
 def pos(request):
     """The billing screen. Ensures the business has payment methods first."""
     ensure_default_methods(request.business)
+
+    cash_method = (
+        PaymentMethod.objects.for_business(request.business)
+        .filter(code="cash", is_active=True)
+        .first()
+    )
+    if not cash_method:
+        cash_method = (
+            PaymentMethod.objects.for_business(request.business)
+            .filter(is_cash_like=True, is_active=True)
+            .first()
+        )
+
+    credit_method = (
+        PaymentMethod.objects.for_business(request.business)
+        .filter(code="credit", is_active=True)
+        .first()
+    )
+
+    # Top / fast-selling products (up to 12 items, prioritized by sales volume, then name)
+    top_products_qs = (
+        Product.objects.for_business(request.business)
+        .filter(is_active=True)
+        .annotate(total_sold=Sum("sale_items__quantity"))
+        .order_by(models.F("total_sold").desc(nulls_last=True), "name")[:12]
+    )
+    top_products = [
+        {
+            "id": p.id,
+            "name": p.name,
+            "price": str(p.selling_price),
+            "tax": str(p.tax_percent),
+            "unit": p.unit,
+            "stock": str(p.current_stock),
+            "sku": p.sku,
+            "barcode": p.barcode or "",
+        }
+        for p in top_products_qs
+    ]
+
     context = {
         "payment_methods": PaymentMethod.objects.for_business(request.business).filter(
             is_active=True
@@ -33,6 +74,9 @@ def pos(request):
             is_active=True
         ).order_by("name"),
         "currency_symbol": request.business.currency_symbol,
+        "default_cash_method_id": cash_method.id if cash_method else "",
+        "default_credit_method_id": credit_method.id if credit_method else "",
+        "top_products": top_products,
     }
     return render(request, "sales/pos.html", context)
 
@@ -123,7 +167,9 @@ def pos_checkout(request):
 
     return JsonResponse({
         "ok": True,
+        "sale_id": sale.pk,
         "invoice_number": sale.invoice_number,
+        "total_amount": str(sale.total),
         "redirect": reverse("sales:invoice", args=[sale.pk]),
     })
 

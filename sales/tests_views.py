@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from businesses.models import Business, BusinessMembership
+from customers.models import Customer
 from payments.services import ensure_default_methods
 from payments.models import PaymentMethod
 from products.models import Product
@@ -81,6 +82,98 @@ class PosViewTests(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertIn("customer", resp.json()["error"].lower())
         self.assertEqual(Sale.objects.count(), 0)
+
+    def test_pos_context_includes_quick_actions(self):
+        resp = self.client.get(reverse("sales:pos"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("top_products", resp.context)
+        self.assertIn("default_cash_method_id", resp.context)
+        self.assertIn("default_credit_method_id", resp.context)
+        self.assertTrue(resp.context["default_cash_method_id"])
+        self.assertTrue(resp.context["default_credit_method_id"])
+
+    def test_quick_cash_walkin_customer_deducts_stock(self):
+        # Initial stock: 50
+        cash = PaymentMethod.objects.for_business(self.business).get(code="cash")
+        body = {
+            "items": [{"product": self.product.id, "quantity": 3, "unit_price": "30"}],
+            "customer": None,
+            "payments": [{"method": cash.id, "amount": "90"}],
+        }
+        resp = self.client.post(
+            reverse("sales:pos_checkout"), data=json.dumps(body),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["total_amount"], "90.00")
+
+        sale = Sale.objects.get(invoice_number=data["invoice_number"])
+        self.assertIsNone(sale.customer)
+        self.assertEqual(sale.paid_amount, Decimal("90.00"))
+        self.assertEqual(sale.due_amount, Decimal("0.00"))
+
+        # Verify stock deducted: 50 - 3 = 47
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.current_stock, Decimal("47.000"))
+
+    def test_quick_cash_regular_customer_records_under_customer(self):
+        customer = Customer.objects.create(
+            business=self.business, name="Ramesh Kumar", phone="9876543210"
+        )
+        cash = PaymentMethod.objects.for_business(self.business).get(code="cash")
+        body = {
+            "items": [{"product": self.product.id, "quantity": 2, "unit_price": "30"}],
+            "customer": customer.id,
+            "payments": [{"method": cash.id, "amount": "60"}],
+        }
+        resp = self.client.post(
+            reverse("sales:pos_checkout"), data=json.dumps(body),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        sale = Sale.objects.get(invoice_number=data["invoice_number"])
+        self.assertEqual(sale.customer, customer)
+        self.assertEqual(sale.paid_amount, Decimal("60.00"))
+        self.assertEqual(sale.due_amount, Decimal("0.00"))
+
+        # Customer's purchase history has this sale
+        self.assertIn(sale, customer.sales.all())
+        # Stock: 50 - 2 = 48
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.current_stock, Decimal("48.000"))
+
+    def test_quick_credit_regular_customer_udhaar_updates_balance(self):
+        customer = Customer.objects.create(
+            business=self.business, name="Sharma Ji", phone="9123456780"
+        )
+        credit = PaymentMethod.objects.for_business(self.business).get(code="credit")
+        body = {
+            "items": [{"product": self.product.id, "quantity": 5, "unit_price": "30"}],
+            "customer": customer.id,
+            "payments": [{"method": credit.id, "amount": "150"}],
+        }
+        resp = self.client.post(
+            reverse("sales:pos_checkout"), data=json.dumps(body),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        sale = Sale.objects.get(invoice_number=data["invoice_number"])
+        self.assertEqual(sale.customer, customer)
+        self.assertEqual(sale.paid_amount, Decimal("0.00"))
+        self.assertEqual(sale.due_amount, Decimal("150.00"))
+        self.assertEqual(sale.payment_status, Sale.PaymentStatus.UNPAID)
+
+        # Customer balance updated: +150
+        customer.refresh_from_db()
+        self.assertEqual(customer.current_balance, Decimal("150.00"))
+
+        # Stock deducted: 50 - 5 = 45
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.current_stock, Decimal("45.000"))
 
 
 class InvoiceViewTests(TestCase):
