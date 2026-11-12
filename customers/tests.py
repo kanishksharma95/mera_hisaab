@@ -173,3 +173,40 @@ class EmailReminderTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "no pending udhaar")
+
+
+class CustomerServicesTests(TestCase):
+    def setUp(self):
+        self.user, self.business = make_user_with_business("custserv@shop.com", "Cust Store")
+
+    def test_customer_crud_services(self):
+        from django.core.exceptions import ValidationError
+        from .services import create_customer, deactivate_customer, update_customer
+
+        # Required name
+        with self.assertRaises(ValidationError):
+            create_customer(business=self.business, name="")
+
+        cust = create_customer(
+            business=self.business,
+            name="Rahul Sharma",
+            phone="9876543210",
+            email="rahul@example.com",
+            credit_limit="5000",
+            notes="Regular patron",
+        )
+        self.assertEqual(cust.name, "Rahul Sharma")
+        self.assertEqual(cust.phone, "9876543210")
+        self.assertEqual(cust.credit_limit, Decimal("5000.00"))
+        self.assertEqual(cust.current_balance, Decimal("0.00"))
+
+        # Update
+        updated = update_customer(customer=cust, phone="9999999999", credit_limit="10000")
+        self.assertEqual(updated.phone, "9999999999")
+        self.assertEqual(updated.credit_limit, Decimal("10000.00"))
+
+        # Deactivate
+        deactivate_customer(customer=updated)
+        updated.refresh_from_db()
+        self.assertFalse(updated.is_active)
+

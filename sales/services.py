@@ -195,3 +195,73 @@ def create_sale(*, business, user, items, customer=None, order_discount=0,
         )
 
     return sale
+
+
+@transaction.atomic
+def void_sale(*, business, sale, user=None, reason=""):
+    """Cancel/void a sale by atomically reversing inventory, payments, and ledger entries.
+    
+    Accounting records are immutable: the original Sale and CustomerLedgerEntry
+    rows are never deleted. Reversal entries are posted with reference void:sale:<id>.
+    """
+    from customers.services import record_payment
+
+    if not isinstance(sale, Sale):
+        s = str(sale).strip()
+        if s.isdigit():
+            found = Sale.objects.for_business(business).filter(pk=int(s)).first()
+        else:
+            found = Sale.objects.for_business(business).filter(invoice_number__iexact=s).first()
+        if not found:
+            raise ValidationError(f"Sale '{sale}' not found for this shop.")
+        sale = found
+    elif sale.business_id != business.id:
+        raise ValidationError("Sale does not belong to this shop.")
+
+    if "[VOIDED]" in (sale.notes or ""):
+        raise ValidationError(f"Sale {sale.invoice_number} is already voided.")
+
+    # 1. Reverse stock for each sale item
+    for item in sale.items.select_related("product").all():
+        if item.product is not None:
+            record_transaction(
+                product=item.product,
+                kind=InventoryTransaction.Kind.RETURN,
+                quantity=item.quantity,
+                reference=f"void:sale:{sale.id}",
+                note=f"Void sale {sale.invoice_number}: {reason}".strip(": "),
+                user=user,
+            )
+
+    # 2. Reverse payments (record refund payments OUT)
+    original_payments = Payment.objects.for_business(business).filter(
+        sale=sale, direction=Payment.Direction.IN
+    )
+    for p in original_payments:
+        Payment.objects.create(
+            business=business,
+            direction=Payment.Direction.OUT,
+            method=p.method,
+            amount=p.amount,
+            sale=sale,
+            customer=sale.customer,
+            reference=f"void:sale:{sale.id}",
+            note=f"Refund for voided sale {sale.invoice_number}",
+            created_by=user,
+        )
+
+    # 3. Reverse customer udhaar if any credit was charged
+    if sale.due_amount > 0 and sale.customer:
+        record_payment(
+            customer=sale.customer,
+            amount=sale.due_amount,
+            description=f"Reversal of credit sale {sale.invoice_number}",
+            reference=f"void:sale:{sale.id}",
+            user=user,
+        )
+
+    # 4. Mark sale notes with [VOIDED]
+    sale.notes = f"[VOIDED] {sale.notes or ''}".strip()
+    sale.save(update_fields=["notes", "updated_at"])
+    return sale
+

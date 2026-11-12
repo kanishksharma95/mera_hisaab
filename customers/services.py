@@ -75,3 +75,99 @@ def record_payment(*, customer, amount, description="", method="", reference="",
         method=method,
         user=user,
     )
+
+
+def create_customer(
+    *,
+    business,
+    name,
+    phone="",
+    email="",
+    address="",
+    credit_limit=0,
+    notes="",
+    user=None,
+):
+    """Create a new customer profile.
+    
+    Balance starts at 0 and changes only via ledger entries (post_entry/record_charge).
+    """
+    from django.core.exceptions import ValidationError
+
+    name = (name or "").strip()
+    if not name:
+        raise ValidationError("Customer name is required.")
+
+    credit_limit = Decimal(str(credit_limit or 0))
+    if credit_limit < 0:
+        raise ValidationError("Credit limit cannot be negative.")
+
+    return Customer.objects.create(
+        business=business,
+        name=name,
+        phone=(phone or "").strip(),
+        email=(email or "").strip(),
+        address=(address or "").strip(),
+        credit_limit=credit_limit,
+        notes=(notes or "").strip(),
+    )
+
+
+def update_customer(
+    *,
+    customer,
+    name=None,
+    phone=None,
+    email=None,
+    address=None,
+    credit_limit=None,
+    notes=None,
+    user=None,
+):
+    """Update non-ledger fields of a customer profile.
+    
+    current_balance is never modified directly.
+    """
+    from django.core.exceptions import ValidationError
+
+    update_fields = ["updated_at"]
+
+    if name is not None:
+        name = name.strip()
+        if not name:
+            raise ValidationError("Customer name cannot be empty.")
+        customer.name = name
+        update_fields.append("name")
+
+    if phone is not None:
+        customer.phone = phone.strip()
+        update_fields.append("phone")
+
+    if email is not None:
+        customer.email = email.strip()
+        update_fields.append("email")
+
+    if address is not None:
+        customer.address = address.strip()
+        update_fields.append("address")
+
+    if credit_limit is not None:
+        cl = Decimal(str(credit_limit))
+        if cl < 0:
+            raise ValidationError("Credit limit cannot be negative.")
+        customer.credit_limit = cl
+        update_fields.append("credit_limit")
+
+    if notes is not None:
+        customer.notes = notes.strip()
+        update_fields.append("notes")
+
+    customer.save(update_fields=update_fields)
+    return customer
+
+
+def deactivate_customer(*, customer, user=None):
+    """Soft-delete a customer."""
+    customer.deactivate()
+    return customer
+

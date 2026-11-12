@@ -234,3 +234,61 @@ class ProductToggleTests(TestCase):
         self.client.post(reverse("products:toggle", args=[self.product.pk]))
         self.product.refresh_from_db()
         self.assertTrue(self.product.is_active)
+
+
+class ProductServicesTests(TestCase):
+    def setUp(self):
+        self.user, self.business = make_user_with_business("serv@shop.com", "Serv Store")
+
+    def test_category_services(self):
+        from django.core.exceptions import ValidationError
+        from .services import create_category, deactivate_category, rename_category
+
+        cat = create_category(business=self.business, name="Beverages", description="Cold drinks")
+        self.assertEqual(cat.name, "Beverages")
+        self.assertEqual(cat.description, "Cold drinks")
+
+        # Duplicate raises
+        with self.assertRaises(ValidationError):
+            create_category(business=self.business, name="Beverages")
+
+        # Rename
+        renamed = rename_category(category=cat, name="Drinks", description="Updated")
+        self.assertEqual(renamed.name, "Drinks")
+        self.assertEqual(renamed.description, "Updated")
+
+        # Deactivate
+        deactivate_category(category=renamed)
+        renamed.refresh_from_db()
+        self.assertFalse(renamed.is_active)
+
+    def test_product_services(self):
+        from django.core.exceptions import ValidationError
+        from .services import create_product, deactivate_product, update_product
+
+        prod = create_product(
+            business=self.business,
+            name="Test Cola",
+            sku="COLA-01",
+            purchase_price="30.00",
+            selling_price="40.00",
+            opening_stock="10",
+            user=self.user,
+        )
+        self.assertEqual(prod.name, "Test Cola")
+        self.assertEqual(prod.current_stock, Decimal("10"))
+
+        # Unique SKU
+        with self.assertRaises(ValidationError):
+            create_product(business=self.business, name="Other Cola", sku="COLA-01")
+
+        # Update
+        updated = update_product(product=prod, selling_price="45.00", brand="Local")
+        self.assertEqual(updated.selling_price, Decimal("45.00"))
+        self.assertEqual(updated.brand, "Local")
+
+        # Deactivate
+        deactivate_product(product=updated)
+        updated.refresh_from_db()
+        self.assertFalse(updated.is_active)
+

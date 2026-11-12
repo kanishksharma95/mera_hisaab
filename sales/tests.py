@@ -231,3 +231,60 @@ class EmailInvoiceTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, "valid customer email")
+
+
+class VoidSaleTests(TestCase):
+    def setUp(self):
+        self.user, self.business = setup_shop(email="void@myshop.com", name="Void Shop")
+        self.customer = Customer.objects.create(business=self.business, name="Credit Cust")
+        self.p = Product.objects.create(
+            business=self.business,
+            name="Biscuit",
+            selling_price=Decimal("50.00"),
+            purchase_price=Decimal("30.00"),
+            current_stock=Decimal("20.000"),
+        )
+        # Create a partial cash, partial udhaar sale: 2 biscuits = 100. Cash 40, Due 60.
+        self.sale = create_sale(
+            business=self.business,
+            user=self.user,
+            customer=self.customer,
+            items=[{"product": self.p, "quantity": 2}],
+            payments=[{"method": method(self.business, "cash"), "amount": Decimal("40.00")}],
+        )
+
+    def test_void_sale_reverses_stock_payments_and_ledger(self):
+        from django.core.exceptions import ValidationError
+        from inventory.models import InventoryTransaction
+        from payments.models import Payment
+        from sales.services import void_sale
+
+        self.p.refresh_from_db()
+        self.customer.refresh_from_db()
+        self.assertEqual(self.p.current_stock, Decimal("18.000"))
+        self.assertEqual(self.customer.current_balance, Decimal("60.00"))
+
+        # Void sale
+        voided = void_sale(business=self.business, sale=self.sale, user=self.user, reason="Customer cancelled")
+        self.assertIn("[VOIDED]", voided.notes)
+
+        # Stock returned
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.current_stock, Decimal("20.000"))
+        last_txn = self.p.inventory_transactions.first()
+        self.assertEqual(last_txn.kind, InventoryTransaction.Kind.RETURN)
+        self.assertEqual(last_txn.quantity, Decimal("2.000"))
+
+        # Customer udhaar cleared
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.current_balance, Decimal("0.00"))
+
+        # Refund payment recorded
+        refund = Payment.objects.filter(sale=self.sale, direction=Payment.Direction.OUT).first()
+        self.assertIsNotNone(refund)
+        self.assertEqual(refund.amount, Decimal("40.00"))
+
+        # Voiding again raises error
+        with self.assertRaises(ValidationError):
+            void_sale(business=self.business, sale=self.sale, user=self.user)
+
