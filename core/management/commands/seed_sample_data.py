@@ -79,15 +79,12 @@ class Command(BaseCommand):
                 },
             )
 
-            # 4. Link Memberships
-            BusinessMembership.objects.get_or_create(
-                user=demo_user, business=business,
-                defaults={"role": BusinessMembership.Role.OWNER},
-            )
-            BusinessMembership.objects.get_or_create(
-                user=kanishk_user, business=business,
-                defaults={"role": BusinessMembership.Role.OWNER},
-            )
+            # 4. Link Memberships (Ensure demo user, kanishk, and all registered users have access)
+            for u in User.objects.all():
+                BusinessMembership.objects.get_or_create(
+                    user=u, business=business,
+                    defaults={"role": BusinessMembership.Role.OWNER},
+                )
             # Seed suppliers and purchases for any Kiryana or related store in the system
             for other_b in Business.objects.all():
                 # Ensure default payment methods & categories exist
@@ -219,6 +216,11 @@ class Command(BaseCommand):
                 ("Amul Butter 500g", cat_dairy, "8901262010055", "255.00", "285.00", "12", "19", "pack", "20"),
                 ("Amul Taaza Homogenised Toned Milk 1L", cat_dairy, "8901262010123", "64.00", "74.00", "0", "40", "pack", "15"),
                 # Snacks & Beverages
+                ("Lays American Style Cream & Onion 50g", cat_snacks, "8901491101837", "16.00", "20.00", "12", "45", "pkt", "10"),
+                ("Lays India's Magic Masala 50g", cat_snacks, "8901491101844", "16.00", "20.00", "12", "50", "pkt", "10"),
+                ("Kurkure Masala Munch 90g", cat_snacks, "8901491001014", "16.00", "20.00", "12", "40", "pkt", "10"),
+                ("Britannia Good Day Butter Cookies 120g", cat_snacks, "8901063011124", "24.00", "30.00", "18", "35", "pack", "10"),
+                ("Thums Up Charged 750ml", cat_snacks, "8901764012289", "36.00", "45.00", "28", "30", "bottle", "8"),
                 ("Tata Tea Premium 250g", cat_snacks, "8901234567892", "110.00", "135.00", "5", "30", "pack", "10"),
                 ("Nescafe Classic Coffee 50g", cat_snacks, "8901234567899", "100.00", "110.00", "0", "15", "jar", "5"),
                 ("Maggi 2-Minute Masala Noodles 70g", cat_snacks, "8901058852331", "11.50", "14.00", "12", "150", "pack", "30"),

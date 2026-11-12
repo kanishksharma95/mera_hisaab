@@ -38,6 +38,9 @@ services:
       # Force Postgres in prod (never silently fall back to SQLite).
       - key: USE_SQLITE
         value: "0"
+      # Seed realistic sample data for General Store
+      - key: SEED_DEMO_DATA
+        value: "1"
       # --- Email ---
       # PREFERRED on Render: Brevo over HTTPS. Render's free tier blocks
       # outbound SMTP ports (25/465/587), so the Gmail SMTP vars below will
