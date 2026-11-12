@@ -19,6 +19,10 @@ from django.utils import timezone
 from businesses.models import BusinessMembership
 from core.mixins import business_required, role_required
 
+import json
+
+from django.views.decorators.http import require_POST
+
 
 def healthz(request):
     """Additive liveness/readiness probe.
@@ -343,3 +347,63 @@ def _parse_date(value):
     return timezone.make_aware(
         timezone.datetime(d.year, d.month, d.day)
     )
+
+
+# ---------------------------------------------------------------------------
+# AI Sahayak (in-process ADK assistant)
+# ---------------------------------------------------------------------------
+
+
+@business_required
+def ai_assistant(request):
+    """Chat page for the natural-language AI shop assistant."""
+    return render(
+        request,
+        "core/ai_assistant.html",
+        {"business": request.business},
+    )
+
+
+@business_required
+@require_POST
+def ai_chat(request):
+    """JSON endpoint: run one agent turn scoped to the logged-in shopkeeper.
+
+    The agent resolves its data and permissions from THIS user's business and
+    membership (never a hardcoded tenant), so every shopkeeper only ever sees
+    and changes their own shop's data.
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({"error": "Invalid request."}, status=400)
+
+    message = (payload.get("message") or "").strip()
+    if not message:
+        return JsonResponse({"error": "Message khaali hai."}, status=400)
+    if len(message) > 2000:
+        return JsonResponse({"error": "Message bahut lamba hai."}, status=400)
+
+    from core.agent_runner import AgentUnavailable, ask_agent
+
+    try:
+        reply = ask_agent(
+            business_id=request.business.id,
+            user_id=request.user.id,
+            message=message,
+        )
+    except AgentUnavailable:
+        return JsonResponse(
+            {"error": "AI Sahayak abhi uplabdh nahi hai. Thodi der baad koshish karein."},
+            status=503,
+        )
+    except Exception:  # pragma: no cover - defensive; don't leak internals
+        import logging
+
+        logging.getLogger(__name__).exception("AI assistant turn failed")
+        return JsonResponse(
+            {"error": "Kuch gadbad ho gayi. Dobara koshish karein."},
+            status=500,
+        )
+
+    return JsonResponse({"reply": reply})

@@ -13,3 +13,7 @@ django-ratelimit>=4.1.0
 redis>=5.0
 django-anymail>=11.0
 
+# AI Sahayak — in-process natural-language assistant (Google ADK + Gemini)
+google-adk>=2.14.0
+python-dotenv>=1.0.0
+

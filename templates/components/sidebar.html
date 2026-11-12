@@ -18,6 +18,10 @@ don't exist yet. Each phase will activate its section.
        href="{% url 'core:dashboard' %}">
       <i class="bi bi-speedometer2"></i> {% trans "Dashboard" %}
     </a>
+    <a class="mh-nav-link {% if request.resolver_match.url_name == 'ai_assistant' %}active{% endif %}"
+       href="{% url 'core:ai_assistant' %}">
+      <i class="bi bi-robot"></i> {% trans "AI Sahayak" %}
+    </a>
 
     <div class="mh-nav-heading">{% trans "Catalog" %}</div>
     {% with rname=request.resolver_match.url_name|default:'' rns=request.resolver_match.namespace|default:'' %}

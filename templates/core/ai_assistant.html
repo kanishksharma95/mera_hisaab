@@ -1,0 +1,299 @@
+{% extends "layouts/app_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "AI Sahayak" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ---- AI Sahayak chat ---- */
+  .mh-ai {
+    --ai-user: linear-gradient(135deg, var(--mh-primary), var(--mh-primary-dark));
+    display: flex; flex-direction: column;
+    height: calc(100dvh - 148px); min-height: 460px;
+    max-width: 860px; margin: 0 auto;
+    background: var(--mh-card-bg);
+    border: 1px solid var(--mh-border);
+    border-radius: var(--mh-radius);
+    box-shadow: var(--mh-shadow-md);
+    overflow: hidden;
+  }
+  @media (max-width: 991.98px) { .mh-ai { height: calc(100dvh - 176px); } }
+
+  /* Header */
+  .mh-ai-head {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .85rem 1.1rem;
+    border-bottom: 1px solid var(--mh-border);
+    background: var(--mh-card-bg);
+  }
+  .mh-ai-ava {
+    flex: 0 0 auto; width: 42px; height: 42px; border-radius: 50%;
+    display: grid; place-items: center; color: #fff; font-size: 1.25rem;
+    background: var(--ai-user); box-shadow: 0 4px 12px rgba(15,118,110,.35);
+  }
+  .mh-ai-head h5 { margin: 0; font-weight: 700; line-height: 1.1; }
+  .mh-ai-head .sub { font-size: .8rem; color: var(--mh-text-muted); display: flex; align-items: center; gap: .35rem; }
+  .mh-ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mh-success);
+               box-shadow: 0 0 0 0 rgba(22,163,74,.5); animation: mhPulse 2s infinite; }
+  @keyframes mhPulse { 0%{box-shadow:0 0 0 0 rgba(22,163,74,.5)} 70%{box-shadow:0 0 0 6px rgba(22,163,74,0)} 100%{box-shadow:0 0 0 0 rgba(22,163,74,0)} }
+  .mh-ai-clear { margin-left: auto; }
+
+  /* Message log */
+  .mh-ai-log { flex: 1 1 auto; overflow-y: auto; padding: 1.1rem; scroll-behavior: smooth; }
+  .mh-ai-log::-webkit-scrollbar { width: 8px; }
+  .mh-ai-log::-webkit-scrollbar-thumb { background: var(--mh-border); border-radius: 8px; }
+
+  .mh-row { display: flex; gap: .6rem; margin-bottom: 1rem; align-items: flex-end; animation: mhIn .25s ease; }
+  .mh-row.user { flex-direction: row-reverse; }
+  @keyframes mhIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .mh-mini-ava {
+    flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%;
+    display: grid; place-items: center; font-size: .85rem; color: #fff; background: var(--ai-user);
+  }
+  .mh-row.user .mh-mini-ava { background: var(--mh-text-muted); }
+
+  .mh-bubble {
+    max-width: 80%; padding: .65rem .9rem; border-radius: 16px;
+    line-height: 1.5; font-size: .95rem; word-wrap: break-word; overflow-wrap: anywhere;
+  }
+  .mh-row.bot .mh-bubble {
+    background: var(--mh-bg); color: var(--mh-text);
+    border: 1px solid var(--mh-border); border-bottom-left-radius: 5px;
+  }
+  .mh-row.user .mh-bubble {
+    background: var(--ai-user); color: #fff; border-bottom-right-radius: 5px;
+    box-shadow: 0 4px 12px rgba(15,118,110,.25);
+  }
+  .mh-bubble p { margin: 0 0 .5rem; } .mh-bubble p:last-child { margin-bottom: 0; }
+  .mh-bubble ul, .mh-bubble ol { margin: .25rem 0 .5rem; padding-left: 1.2rem; }
+  .mh-bubble li { margin-bottom: .2rem; }
+  .mh-bubble code { background: rgba(127,127,127,.18); padding: .05rem .35rem; border-radius: 6px; font-size: .88em; }
+  .mh-row.user .mh-bubble code { background: rgba(255,255,255,.22); }
+  .mh-time { font-size: .68rem; color: var(--mh-text-muted); margin: .2rem .3rem 0; }
+  .mh-row.user .mh-time { text-align: right; }
+
+  /* Typing dots */
+  .mh-typing { display: inline-flex; gap: 4px; padding: .2rem 0; }
+  .mh-typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--mh-text-muted); opacity: .5; animation: mhBlink 1.2s infinite; }
+  .mh-typing span:nth-child(2){ animation-delay: .2s; } .mh-typing span:nth-child(3){ animation-delay: .4s; }
+  @keyframes mhBlink { 0%,60%,100%{ transform: translateY(0); opacity:.4 } 30%{ transform: translateY(-4px); opacity:1 } }
+
+  /* Welcome / empty state */
+  .mh-ai-welcome { text-align: center; margin: auto; max-width: 480px; padding: 1rem; }
+  .mh-ai-welcome .big {
+    width: 66px; height: 66px; border-radius: 20px; margin: 0 auto .9rem;
+    display: grid; place-items: center; font-size: 2rem; color: #fff; background: var(--ai-user);
+    box-shadow: 0 10px 26px rgba(15,118,110,.4);
+  }
+  .mh-ai-welcome h4 { font-weight: 700; margin-bottom: .35rem; }
+  .mh-chips { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin-top: 1.1rem; }
+  .mh-chip {
+    cursor: pointer; border: 1px solid var(--mh-border); background: var(--mh-card-bg);
+    color: var(--mh-text); border-radius: 999px; padding: .5rem .9rem; font-size: .86rem;
+    display: inline-flex; align-items: center; gap: .4rem; transition: all .15s ease;
+  }
+  .mh-chip:hover { border-color: var(--mh-primary); color: var(--mh-primary); transform: translateY(-1px); box-shadow: var(--mh-shadow-sm); }
+  .mh-chip i { color: var(--mh-primary); }
+
+  /* Composer */
+  .mh-ai-foot { border-top: 1px solid var(--mh-border); padding: .75rem .9rem .6rem; background: var(--mh-card-bg); }
+  .mh-composer {
+    display: flex; align-items: flex-end; gap: .5rem;
+    background: var(--mh-bg); border: 1px solid var(--mh-border); border-radius: 22px; padding: .35rem .35rem .35rem .9rem;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .mh-composer:focus-within { border-color: var(--mh-primary); box-shadow: 0 0 0 3px rgba(15,118,110,.12); }
+  .mh-composer textarea {
+    flex: 1 1 auto; border: 0; background: transparent; resize: none; outline: none;
+    color: var(--mh-text); font-size: .95rem; line-height: 1.4; max-height: 120px; padding: .5rem 0;
+  }
+  .mh-send {
+    flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; border: 0; color: #fff;
+    background: var(--ai-user); display: grid; place-items: center; font-size: 1.05rem;
+    transition: transform .12s ease, opacity .12s ease;
+  }
+  .mh-send:hover:not(:disabled) { transform: scale(1.06); }
+  .mh-send:disabled { opacity: .5; cursor: not-allowed; }
+  .mh-ai-hint { font-size: .72rem; color: var(--mh-text-muted); text-align: center; margin-top: .45rem; }
+  .mh-ai-hint i { color: var(--mh-warning); }
+</style>
+{% endblock %}
+
+{% block content %}
+<input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+
+<div class="mh-ai">
+  <!-- Header -->
+  <div class="mh-ai-head">
+    <div class="mh-ai-ava"><i class="bi bi-robot"></i></div>
+    <div>
+      <h5>{% trans "AI Sahayak" %}</h5>
+      <div class="sub"><span class="mh-ai-dot"></span> {{ business.name }} · {% trans "Online" %}</div>
+    </div>
+    <button type="button" id="clearChat" class="btn btn-sm btn-light mh-ai-clear" title="{% trans 'Clear chat' %}">
+      <i class="bi bi-arrow-counterclockwise"></i>
+    </button>
+  </div>
+
+  <!-- Messages -->
+  <div id="chatLog" class="mh-ai-log">
+    <div id="welcome" class="mh-ai-welcome">
+      <div class="big"><i class="bi bi-robot"></i></div>
+      <h4>{% trans "Namaste! 🙏" %}</h4>
+      <p class="text-muted mb-0">
+        {% trans "Main aapka AI Sahayak hoon. Bikri, udhaar, stock ya naya item — Hindi, Hinglish ya English mein kuch bhi poochhiye." %}
+      </p>
+      <div class="mh-chips">
+        <span class="mh-chip" data-q="Aaj ki bikri ka summary batao"><i class="bi bi-graph-up-arrow"></i> {% trans "Aaj ki bikri" %}</span>
+        <span class="mh-chip" data-q="Kaunsa maal khatam hone wala hai?"><i class="bi bi-box-seam"></i> {% trans "Low stock" %}</span>
+        <span class="mh-chip" data-q="Kis-kis grahak ka udhaar baaki hai?"><i class="bi bi-cash-stack"></i> {% trans "Udhaar baaki" %}</span>
+        <span class="mh-chip" data-q="Pichhle hafte ki sabse zyada bikne wali cheezein kaunsi hain?"><i class="bi bi-trophy"></i> {% trans "Top products" %}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Composer -->
+  <div class="mh-ai-foot">
+    <form id="chatForm" autocomplete="off">
+      <div class="mh-composer">
+        <textarea id="chatInput" rows="1" maxlength="2000"
+                  placeholder="{% trans 'Yahaan likhiye…  (Enter se bhejein)' %}"></textarea>
+        <button id="chatSend" type="submit" class="mh-send" aria-label="{% trans 'Send' %}">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+    </form>
+    <div class="mh-ai-hint">
+      <i class="bi bi-shield-check"></i>
+      {% trans "Likhne/badalne wale kaam (sale, jama, naya item) par AI pehle confirmation maangega." %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const csrf = document.getElementById("csrfToken").value;
+  const chatUrl = "{% url 'core:ai_chat' %}";
+  const log = document.getElementById("chatLog");
+  const welcome = document.getElementById("welcome");
+  const form = document.getElementById("chatForm");
+  const input = document.getElementById("chatInput");
+  const sendBtn = document.getElementById("chatSend");
+
+  function scrollDown() { log.scrollTop = log.scrollHeight; }
+  function nowTime() {
+    return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  // Light, SAFE markdown: escape first, then bold / code / bullet + numbered lists.
+  function formatReply(raw) {
+    const inline = (s) => escapeHtml(s)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+
+    const lines = raw.split(/\r?\n/);
+    let html = "", list = null; // list = 'ul' | 'ol' | null
+    const closeList = () => { if (list) { html += `</${list}>`; list = null; } };
+
+    for (let line of lines) {
+      const t = line.trim();
+      const ul = t.match(/^[-*•]\s+(.*)$/);
+      const ol = t.match(/^\d+[.)]\s+(.*)$/);
+      if (ul) { if (list !== "ul") { closeList(); html += "<ul>"; list = "ul"; } html += `<li>${inline(ul[1])}</li>`; }
+      else if (ol) { if (list !== "ol") { closeList(); html += "<ol>"; list = "ol"; } html += `<li>${inline(ol[1])}</li>`; }
+      else if (t === "") { closeList(); }
+      else { closeList(); html += `<p>${inline(t)}</p>`; }
+    }
+    closeList();
+    return html || `<p>${inline(raw)}</p>`;
+  }
+
+  function addMessage(content, who) {
+    if (welcome) welcome.remove();
+    const row = document.createElement("div");
+    row.className = "mh-row " + who;
+    const ava = who === "user"
+      ? '<div class="mh-mini-ava"><i class="bi bi-person-fill"></i></div>'
+      : '<div class="mh-mini-ava"><i class="bi bi-robot"></i></div>';
+    const body = who === "user" ? escapeHtml(content) : formatReply(content);
+    row.innerHTML = ava +
+      `<div><div class="mh-bubble">${who === "user" ? "<p>" + body + "</p>" : body}</div>` +
+      `<div class="mh-time">${nowTime()}</div></div>`;
+    log.appendChild(row);
+    scrollDown();
+  }
+
+  function addTyping() {
+    const row = document.createElement("div");
+    row.className = "mh-row bot";
+    row.id = "typingRow";
+    row.innerHTML = '<div class="mh-mini-ava"><i class="bi bi-robot"></i></div>' +
+      '<div class="mh-bubble"><span class="mh-typing"><span></span><span></span><span></span></span></div>';
+    log.appendChild(row);
+    scrollDown();
+    return row;
+  }
+
+  async function send(message) {
+    addMessage(message, "user");
+    input.value = ""; autoGrow();
+    input.disabled = true; sendBtn.disabled = true;
+    const typing = addTyping();
+    try {
+      const res = await fetch(chatUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": csrf },
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json().catch(() => ({}));
+      typing.remove();
+      addMessage(res.ok && data.reply ? data.reply : (data.error || "Kuch gadbad ho gayi. Dobara koshish karein."), "bot");
+    } catch (e) {
+      typing.remove();
+      addMessage("Network error. Internet check karke dobara koshish karein.", "bot");
+    } finally {
+      input.disabled = false; sendBtn.disabled = false; input.focus();
+    }
+  }
+
+  function autoGrow() {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    const msg = input.value.trim();
+    if (msg) send(msg);
+  });
+
+  // Enter to send, Shift+Enter for newline.
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+  });
+  input.addEventListener("input", autoGrow);
+
+  document.addEventListener("click", function (e) {
+    const chip = e.target.closest(".mh-chip");
+    if (chip) send(chip.getAttribute("data-q"));
+  });
+
+  document.getElementById("clearChat").addEventListener("click", function () {
+    log.querySelectorAll(".mh-row").forEach(r => r.remove());
+    if (!document.getElementById("welcome")) location.reload();
+  });
+
+  input.focus();
+})();
+</script>
+{% endblock %}
